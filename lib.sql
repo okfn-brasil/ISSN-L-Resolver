@@ -2,6 +2,10 @@
 -- lib.issnl_get() and some util functions
 -- v1.0-2014 of https://github.com/ppKrauss/ISSN-L-resolver 
 --
+CREATE OR REPLACE FUNCTION lib.issnl_get(text)  RETURNS text AS $func$
+  -- returns the ISSN-L of any ISSN  
+  select lib.issn_convert(lib.issnl_get(  substr(translate(trim($1), '-', ''),1,7)::int  ))
+$func$ LANGUAGE SQL IMMUTABLE;
 
 
 CREATE OR REPLACE FUNCTION lib.issn_format(text)
