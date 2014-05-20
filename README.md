@@ -4,7 +4,7 @@ ISSN-L-resolver
 With PostgreSQL, converts any ISSN to the correspondent ISSN-L, using a  lightweight structure,
 
   ````sql
-   CREATE TABLE $table (issn int not null primary key, issn_l int not null);
+   CREATE TABLE lib.issn_l (issn int not null primary key, issn_l int not null);
   ````
 
 In order to have access to the table of correspondence ISSN/ISSN-L,  fill the form on ISSN-ORG website:
