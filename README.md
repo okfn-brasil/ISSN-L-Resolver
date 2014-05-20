@@ -22,3 +22,4 @@ The resolver solution also offer PL/pgSQL funcions to format and to validate ISS
  3. run all with your database: `$ php issnltables2sql.php all | psql -h localhost -U postgres base`
  4. if you not using `lib` schema, create it at your database, `CREATE SCHEMA lib`
  5. install the lib: `$ psql -h localhost -U postgres base < lib.sql`
+ 6. if not use for another thing, `rm -r issnltables` and `rm issnltables.zip`
