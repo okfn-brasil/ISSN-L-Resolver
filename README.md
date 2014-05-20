@@ -19,7 +19,7 @@ but only a half (9Mb) is about "ISSN to ISSN-L" table, and as integers, you can 
 
 The resolver solution also offer PL/pgSQL funcions to format and to validate ISSNs.
 
-## Abstract ##
+## Synopsis ##
 
 The PHP script converts the (updated) "ISSN to ISSN-L" TXT table, into a SQL table of integers (ISSN numbers without the *check digit*).
 The `lib.sql` offers a resolver and all king of util convertion and ISSN handling, inclung *check digit* reconstruction.
