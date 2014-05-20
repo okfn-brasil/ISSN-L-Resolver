@@ -27,7 +27,10 @@ DECLARE
   weight INTEGER[] DEFAULT '{8,7,6,5,4,3,2,1}';
   digits INTEGER DEFAULT 1;
 BEGIN 
-  ISSN := upper(translate(ISSN, '-', '')); -- without hiphen
+  issn := upper(translate(ISSN, '-', '')); -- without hiphen
+  IF issn IS NULL or length(issn)!=8 THEN
+    return NULL; -- error
+  END IF;
   FOR pos IN 1..length(ISSN) LOOP
     casc := ascii(substr(ISSN,pos,1));
     IF casc=88 THEN -- control number X
@@ -56,7 +59,7 @@ $func$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION lib.issn_convert(int)  RETURNS text AS $func$
   -- converts an "integer ISSN" into a standard ISSN
-  SELECT to_char($1, '0000-000')||lib.issn_digit8($1);
+  SELECT trim(to_char($1, '0000-000')||lib.issn_digit8($1));
 $func$ LANGUAGE SQL IMMUTABLE;
 
 
@@ -74,8 +77,8 @@ DECLARE
   aux text := '';
 BEGIN 
   ISSN := trim(to_char($1, '0000000'));
-  IF $1>9999999 OR $1<1 THEN 
-	RETURN NULL; -- ERROR
+  IF $1 IS NULL OR $1>9999999 OR $1<1 THEN 
+	   RETURN NULL; -- ERROR
   END IF;
   FOR pos IN 1..length(ISSN) LOOP
     casc := ascii(substr(ISSN,pos,1));
