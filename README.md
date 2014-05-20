@@ -15,3 +15,10 @@ but only a half (9Mb) is about "ISSN to ISSN-L" table, and as integers, you can 
 
 The resolver solution also offer PL/pgSQL funcions to format and to validate ISSNs.
 
+## Instructions ##
+
+ 1. unzip issnltables.zip in a "issnltables"  folder
+ 2. test at terminal with `$ php issnltables2sql.php`
+ 3. run all with your database: `$ php issnltables2sql.php all | psql -h localhost -U postgres base`
+ 4. if you not using `lib` schema, create it at your database, `CREATE SCHEMA lib`
+ 5. install the lib: `$ psql -h localhost -U postgres base < lib.sql`
