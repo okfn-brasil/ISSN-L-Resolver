@@ -47,12 +47,6 @@ $func$ LANGUAGE PLpgSQL IMMUTABLE;
 
 -- int functions -- 
 
-CREATE OR REPLACE FUNCTION lib.issn_convert(int)  RETURNS text AS $func$
-  -- converts an "integer ISSN" into a standard ISSN
-  SELECT trim(to_char($1, '0000-000')||lib.issn_digit8($1));
-$func$ LANGUAGE SQL IMMUTABLE;
-
-
 CREATE OR REPLACE FUNCTION lib.issn_digit8(int)
   -- calculates the "check digit" of an integer ISSN
   RETURNS CHAR AS -- digit
@@ -86,6 +80,12 @@ BEGIN
   END IF;
 END;
 $func$ LANGUAGE PLpgSQL IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION lib.issn_convert(int)  RETURNS text AS $func$
+  -- converts an "integer ISSN" into a standard ISSN
+  SELECT trim(to_char($1, '0000-000')||lib.issn_digit8($1));
+$func$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION lib.issnl_get(int)  RETURNS int AS $func$
   -- returns the integer ISSN-L of any "integer ISSN"  
