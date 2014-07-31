@@ -1,7 +1,7 @@
 ISSN-L-resolver
 ===============
 
-A **[ISSN]([ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN))** is a standard public [opaque identifier](https://en.wikipedia.org/wiki/Unique_identifier) for [journals](https://en.wikipedia.org/wiki/Periodical_publication), assigned by the [ISSN-ORG authority](http://www.issn.org). It's most frequent use, is to be a short alias name for the [systematic name](https://en.wikipedia.org/wiki/Systematic_name) of the journal, uniquely identifying  the publication content (*ISSN-L*) or specific [media type](https://en.wikipedia.org/wiki/Media_(communication)) of the publication (other ISSNs like *e-ISSN* and *p-ISSN*).
+An **ISSN** is a standard public [opaque identifier](https://en.wikipedia.org/wiki/Unique_identifier) for [journals](https://en.wikipedia.org/wiki/Periodical_publication), assigned by the [ISSN-ORG authority](http://www.issn.org). It's most frequent use, is to be a short alias name for the [systematic name](https://en.wikipedia.org/wiki/Systematic_name) of the journal, uniquely identifying  the publication content (*ISSN-L*) or specific [media type](https://en.wikipedia.org/wiki/Media_(communication)) of the publication (other ISSNs like *e-ISSN* and *p-ISSN*).
 
 The **ISSN-L resolver** converts, with SQL, any ISSN to it's correspondent [ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN), using a  lightweight structure,
 
@@ -67,21 +67,25 @@ Standard (binding) operations for an URN resolution,
 
 Usar "xws." para XML-webservice, "jws." para JSON-webservice.
 
-**standard [endpoint](http://www.w3.org/TR/wsdl20/#Endpoint) rule syntax**:
+**Standard [endpoint](http://www.w3.org/TR/wsdl20/#Endpoint) rule syntax**:
 ```
 	http://<subdomain>.<domain>/<query>
         <subdomain> =  [<specific-name> "."]<ws-format> 
-	<ws-format> = "tws" | "hws" | "jws" | "xws"
+	<ws-format> = "tws" | "hws" | "jws" | "xws" | "ws"
 	<query>     = <urn> | <operation> "/" <urn>
 	<urn>       = "urn:" <urn-schema> ":" <urn-value> | <urn-value>
 ```
-where the alone `<urn-value>` is for local default URN schemas, when exist (ex. a subdomain where only ISSN is used, not need to express all "urn:issn:" prefix). The `<ws-format>` convention is
+where the alone `<urn-value>` is for local default URN schemas, when exist (ex. a subdomain where only ISSN is used, not need to express all "urn:issn:" prefix). The `<operation> "/" <urn>` option is usual in contexts where is difficult to solicitate more `<specific-name>` subdomains for each operation.
+
+The `<ws-format>` convention is
  * "h" for HTML format, in a "human readable" usual context.
  * "x" for XML format in a WSDL2 webservice context.
  * "j" for JSON format, in a JOSN-RPC or similar context.
  * "t" for old *MIME text/plain* output format, a simplification of the XML output, for tests and terminal debuging.
 
-Example: `http://issn.jws.example.org/1234-9223` returns the standard operation for the standard query, that is something like a [catalog card](https://en.wikipedia.org/wiki/Library_catalog#Catalog_card) of the corresponding journal.
+The "ws" `<ws-format>` is a "web-service catalog describer" endpoint, describing each endpoint, by some format (in a `/html`, `/txt`, `/json`, or `/xml` format).
+
+Example: `http://issn.jws.example.org/1234-9223` returns the default operation for the standard query, that is something like a [catalog card](https://en.wikipedia.org/wiki/Library_catalog#Catalog_card) of the corresponding journal.
 
 **Standard operations**: a [WSDL file](https://en.wikipedia.org/wiki/WSDL#Example_WSDL_file) describes services as collections of network endpoints, so, in the same intention, this document describes a set of interoperable endpoints focusing on the handling of ISSN-URNs. As suggested by the [old IETF's RFC-2169](http://tools.ietf.org/html/rfc2169), some typical *"ISSN resolution"* services can be offered, in response to the `<query>`,
 
@@ -92,7 +96,7 @@ Example: `http://issn.jws.example.org/1234-9223` returns the standard operation 
  * *isN*: check if a query string is a valid ISSN (registered in the database).
  * *isC*: like *isN* but also checking format. See SQL `lib.issn_check()`.
 
-The letters in the *standard operation names* are used in the following sense:
+The letters in these *standard operation names* are used in the following sense:
 
  * "C": the canonic URN string (the "official string" and unique identifier);
  * "N": URN, *canonical* or *"reference URN"* (a simplified non-ambiguous version of the canonical one);
@@ -100,7 +104,7 @@ The letters in the *standard operation names* are used in the following sense:
  * "is": "isX" stands "is a kind of X" or "is really a X";
  * "2": stands "to", for convertion services. 
 
-These basic ISSN resolution operations, solves most of the commom interoperability problems.
+These basic ISSN resolution operations, solves most of the commom interoperability problems. Of course, any other operation can be add as 
 
 ## Implementations ##
 Some notes about each specific implementation.
@@ -109,8 +113,29 @@ Some notes about each specific implementation.
 ...
 
 ### Apache2 .htaccess ###
-...
+On the VirtualHost's `DocumentRoot` directory of the mapped `ServerName` (`<subdomain>.<domain>`), add the folowing `.htaccess` file, for an `<operation> "/" <urn>` endpoint syntax option:
+```
+RewriteEngine on
+
+# If requested url is an existing file or folder, don't touch it
+RewriteCond %{REQUEST_FILENAME} -d [OR]
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule . - [L]
+
+# If we reach here, this means it's not a file or folder, we can rewrite...
+RewriteRule ^(?:urn:(issn):)?([0-9][\d\-]*X?)$                           index.php?cmd=std&urn_schema=$1&q=$2 [L]
+RewriteRule ^(n2ns?|n2us?|isn|isc)/(?:urn:(issn):)?([0-9][\d\-]*X?)$     index.php?cmd=$1&urn_schema=$2&q=$3 [L]
+
+<filesMatch "\.(html|htm|js|css|php|py)$">
+FileETag None
+<ifModule mod_headers.c>
+  Header unset ETag
+  Header set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
+  Header set Pragma "no-cache"
+  Header set Expires "Wed, 11 Jan 1984 05:00:00 GMT"
+</ifModule>
+</filesMatch>
+```
 
 ### PHP webservices ###
-...
-
+... index.php ...
