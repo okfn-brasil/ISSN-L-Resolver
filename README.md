@@ -1,9 +1,9 @@
 ISSN-L-resolver
 ===============
 
-A **[ISSN]([ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN))** is a standard public [opaque identifier](https://en.wikipedia.org/wiki/Unique_identifier) for [journals](https://en.wikipedia.org/wiki/Periodical_publication), assigned by the [ISSN-ORG authority](http://www.issn.org). It's most frequent use, is to be an short alias name for the [systematic name](https://en.wikipedia.org/wiki/Systematic_name) of the journal, uniquely identifying  the publication (ISSN-L) or an specific format of the publication (other ISSNs like e-ISSN and p-ISSN).
+A **[ISSN]([ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN))** is a standard public [opaque identifier](https://en.wikipedia.org/wiki/Unique_identifier) for [journals](https://en.wikipedia.org/wiki/Periodical_publication), assigned by the [ISSN-ORG authority](http://www.issn.org). It's most frequent use, is to be a short alias name for the [systematic name](https://en.wikipedia.org/wiki/Systematic_name) of the journal, uniquely identifying  the publication content (*ISSN-L*) or specific [media type](https://en.wikipedia.org/wiki/Media_(communication)) of the publication (other ISSNs like *e-ISSN* and *p-ISSN*).
 
-The *"ISSN-L resolver"*, with SQL, converts any ISSN to it's correspondent [ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN), using a  lightweight structure,
+The **ISSN-L resolver** converts, with SQL, any ISSN to it's correspondent [ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN), using a  lightweight structure,
 
   ````sql
    CREATE TABLE lib.issn_l (
@@ -11,16 +11,16 @@ The *"ISSN-L resolver"*, with SQL, converts any ISSN to it's correspondent [ISSN
     );
   ````
 
-The core of the "ISSN-L resolver" solution is a SQL script writed for PostgreSQL, in PL/pgSQL language. It  offer also funcions to format and to validate string-ISSNs of the front-end, webservices or back-services.
+The core of the *ISSN-L resolver* solution is a SQL script writed for PostgreSQL, in PL/pgSQL language. It  offer also funcions to format and to validate string-ISSNs of the front-end, webservices or back-services.
 
 ## Synopsis ##
 The project have 3 issues:
 
- 1. A PHP script converts the (updated) "ISSN to ISSN-L" TXT table, into a SQL table of integers (ISSN numbers without the *check digit*).
+ 1. A PHP script that converts the (updated) "ISSN to ISSN-L" TXT table, into a SQL table of integers (ISSN numbers without the *check digit*).
 
- 2. The `lib.sql` offers a resolver and all king of util convertion and ISSN handling, inclung *check digit* reconstruction.
+ 2. The `lib.sql`, that offers a resolver and all king of util convertion and ISSN handling, inclung *check digit* reconstruction.
 
- 3. An Apache2 aplication (here with a PHP example) to expose the resolution into a simple and friendly web-service.
+ 3. An Apache2 aplication (here with a PHP example) to expose the resolution into a simple and friendly set of web-service endpoints.
 
 ## Populating ##
 
