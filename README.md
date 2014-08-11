@@ -65,17 +65,35 @@ Standard (binding) operations for an URN resolution,
 * N2U = return the main URL of the journal
 * N2Ns = return the ISSNs of the journal specified by a ISSN
 
-Usar "xws." para XML-webservice, "jws." para JSON-webservice.
+Use "xws." for XML-webservice, "jws." for JSON-webservice.
 
 **Standard [endpoint](http://www.w3.org/TR/wsdl20/#Endpoint) rule syntax**:
+
 ```
-	http://<subdomain>.<domain>/<query>
-        <subdomain> =  [<specific-name> "."]<ws-format> 
-	<ws-format> = "tws" | "hws" | "jws" | "xws" | "ws"
-	<query>     = <urn> | <operation> "/" <urn>
-	<urn>       = "urn:" <urn-schema> ":" <urn-value> | <urn-value>
+    http://<subdomain> "." <domain> "/" <query>
+      <subdomain> =  [<catalog-name> "."] <ws-format> 
+      <ws-format> = "tws" | "hws" | "jws" | "xws" | "ws"
+      <query>     = <urn> | <operation> "/" <urn>
+      <urn>       = "urn:" <urn-schema> ":" <urn-value> | <urn-value>
 ```
-where the alone `<urn-value>` is for local default URN schemas, when exist (ex. a subdomain where only ISSN is used, not need to express all "urn:issn:" prefix). The `<operation> "/" <urn>` option is usual in contexts where is difficult to solicitate more `<specific-name>` subdomains for each operation.
+
+that webservice endpoint's are "short URLs", like this request in a "journal" catalog, `http://jou.tws.myExample.org/n2n/123456`.
+
+Another option, if you can not change subdomain, is a not-so-short-URL, with the same information in the path part of [URL](https://en.wikipedia.org/wiki/Uniform_Resource_Locator):
+
+```
+    http://"ws." <domain> "/" <query>
+      <query>     = <io-format> "/" <operation> "/" <urn>
+      <operation> = <io-format> "." <catalog-name> "." <op-name> | <io-format> "." <op-name>
+      <io-format> = "text" | "html" | "json" | "xml" | "auto"
+      <catalog-name>  = "jou" | "art" | "issue" | "auto"
+      <op-name>   = "N2N" | "N2Ns" | "N2C" | "N2Cs" | "N2U" | "N2Us" | "isN"| "isC" | "info"
+      <urn>       = "urn:" <urn-schema> ":" <urn-value> | <urn-value>
+```
+
+any other bigger or complex parameter, must use HTTP POST, or send GET parameters in an usual query-URL (using ex. the [OpenURL standard](https://en.wikipedia.org/wiki/OpenURL)).
+
+The alone `<urn-value>` is for local default URN schemas, when exist (ex. a subdomain where only ISSN is used, not need to express all "urn:issn:" prefix). The `<operation> "/" <urn>` option is usual in contexts where is difficult to solicitate more `<specific-name>` subdomains for each operation.
 
 The `<ws-format>` convention is
  * "h" for HTML format, in a "human readable" usual context.
@@ -95,7 +113,8 @@ Example: `http://issn.jws.example.org/1234-9223` returns the default operation f
  * *N2Us*: all the "journal's URLs", when exist more than one. No implementation here, only an illustrative operation.
  * *isN*: check if a query string is a valid ISSN (registered in the database).
  * *isC*: like *isN* but also checking format. See SQL `lib.issn_check()`.
-
+ * *info*: the *card catalog* of the object pointed by the URN.
+  
 The letters in these *standard operation names* are used in the following sense:
 
  * "C": the canonic URN string (the "official string" and unique identifier);
@@ -104,8 +123,20 @@ The letters in these *standard operation names* are used in the following sense:
  * "is": "isX" stands "is a kind of X" or "is really a X";
  * "2": stands "to", for convertion services. 
 
-These basic ISSN resolution operations, solves most of the commom interoperability problems. Of course, any other operation can be add as 
+These basic ISSN resolution operations, solves most of the commom interoperability problems. Of course, any other simple (1 operand) operation can be add as new `op-name` or a (2 or more operands) as a complete URL.
 
+#### Endpoint URL examples
+URL example and description:
+
+ * `http://jou.tws.myExample.org/n2n/123456` - Context="journal", io-format="text", operation="n2n" (resolve name replaying name), URN=123456 (using default URN-schema=issn and reference-URN). 
+ * `http://ws.myExample.org/text.jou.n2n/123456` - idem above, but with context and format at path. 
+ * `http://ws.myExample.org/text.auto/0123-456X` - similar to above, but with default operation (`info`) and default (or auto-detect) URN-schema.
+ * ...
+ * `http://jou.tws.myExample.org/n2n/urn:issn:123456` - ...
+ * ...
+ * `http://jou.tws.myExample.org/?cmd=n2n&q=urn:issn:123456` - ...
+ * ...
+ 
 ## Implementations ##
 Some notes about each specific implementation.
 
@@ -114,6 +145,7 @@ Some notes about each specific implementation.
 
 ### Apache2 .htaccess ###
 On the VirtualHost's `DocumentRoot` directory of the mapped `ServerName` (`<subdomain>.<domain>`), add the folowing `.htaccess` file, for an `<operation> "/" <urn>` endpoint syntax option:
+
 ```
 RewriteEngine on
 
