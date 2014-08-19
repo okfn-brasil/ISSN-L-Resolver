@@ -56,8 +56,8 @@ Use the function `lib.issnl_n2c()` ... Examples:
   SELECT lib.issnl_n2c(8755999);     -- returns 8755999
   SELECT lib.issnl_n2c('8755-9994'); -- returns 8755999
   SELECT lib.issnl_n2c(115);         -- returns 67
-  SELECT lib.issn_cast(lib.issnl_n2c(8755999)) -- returns 8755-9994
-  SELECT lib.issn_cast(lib.issnl_n2c(115))     -- returns 0000-0671
+  SELECT lib.issn_cast(lib.issnl_n2c(8755999)); -- returns 8755-9994
+  SELECT lib.issn_cast(lib.issnl_n2c(115));     -- returns 0000-0671
 ```
 ### With webservice ###
 Standard (binding) operations for an URN resolution, inspired in the RFC2169 jargon,
@@ -112,7 +112,7 @@ Example: `http://issn.jws.example.org/1234-9223` returns the default operation f
 **Standard operations**: a [WSDL file](https://en.wikipedia.org/wiki/WSDL#Example_WSDL_file) describes services as collections of network endpoints, so, in the same intention, this document describes a set of interoperable endpoints focusing on the handling of ISSN-URNs. As suggested by the [old IETF's RFC-2169](http://tools.ietf.org/html/rfc2169), some typical *"ISSN resolution"* services can be offered, in response to the `<query>`,
 
  * *N2N*: the *ISSN-L* of the input. See SQL `lib.issnl_get()`.
- * *N2Ns*: all the *ISSN*s grouped by a ISSN-L associated with the input. See SQL `lib.issnl_getall()`.
+ * *N2Ns*: all the ISSNs grouped by a ISSN-L associated with the input. See SQL `lib.issnl_getall()`.
  * *N2U*: the "journal's official URL", where "official" is in the context of the webservice server entity. No implementation here, only an illustrative operation.
  * *N2Us*: all the "journal's URLs", when exist more than one. No implementation here, only an illustrative operation.
  * *isN*: check if a query string is a valid ISSN (registered in the database).
