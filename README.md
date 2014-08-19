@@ -9,7 +9,7 @@ The **ISSN-L resolver** converts, with SQL, any ISSN to it's correspondent [ISSN
    CREATE TABLE lib.issn_l (
       issn integer not null primary key, issn_l integer not null
     );
-    -- see "N2Ns" service, about need for indexes.
+    -- about need for indexes, see comments at lib.issn_N2Ns() function.
   ````
 
 The core of the *ISSN-L resolver* solution is a SQL script writed for PostgreSQL, in PL/pgSQL language. It  offer also funcions to format and to validate string-ISSNs of the front-end, webservices or back-services.
