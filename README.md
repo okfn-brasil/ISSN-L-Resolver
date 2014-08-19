@@ -52,12 +52,13 @@ The "ISSN resolver" is a simple information retrivial service that returns integ
 
 Use the function `lib.issnl_n2c()` ... Examples:
 
-* SELECT lib.issnl_n2c(8755999);     -- returns 8755999
-* SELECT lib.issnl_n2c('8755-9994'); -- returns 8755999
-* SELECT lib.issnl_n2c(115);         -- returns 67
-* SELECT lib.issn_cast(lib.issnl_n2c(8755999)) -- returns 8755-9994
-* SELECT lib.issn_cast(lib.issnl_n2c(115))     -- returns 0000-0671
-
+```sql
+  SELECT lib.issnl_n2c(8755999);     -- returns 8755999
+  SELECT lib.issnl_n2c('8755-9994'); -- returns 8755999
+  SELECT lib.issnl_n2c(115);         -- returns 67
+  SELECT lib.issn_cast(lib.issnl_n2c(8755999)) -- returns 8755-9994
+  SELECT lib.issn_cast(lib.issnl_n2c(115))     -- returns 0000-0671
+```
 ### With webservice ###
 Standard (binding) operations for an URN resolution, inspired in the RFC2169 jargon,
 
