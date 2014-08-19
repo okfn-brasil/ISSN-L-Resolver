@@ -9,6 +9,7 @@ The **ISSN-L resolver** converts, with SQL, any ISSN to it's correspondent [ISSN
    CREATE TABLE lib.issn_l (
       issn integer not null primary key, issn_l integer not null
     );
+    -- see "N2Ns" service, about need for indexes.
   ````
 
 The core of the *ISSN-L resolver* solution is a SQL script writed for PostgreSQL, in PL/pgSQL language. It  offer also funcions to format and to validate string-ISSNs of the front-end, webservices or back-services.
@@ -49,23 +50,25 @@ The "ISSN resolver" is a simple information retrivial service that returns integ
 
 ### With SQL ###
 
-Use the function `lib.issnl_get()` ... Examples:
+Use the function `lib.issnl_n2c()` ... Examples:
 
-* SELECT lib.issnl_get(8755999);     -- returns 8755999
-* SELECT lib.issnl_get('8755-9994'); -- returns 8755999
-* SELECT lib.issnl_get(115);     -- returns 67
-* SELECT lib.issn_convert(lib.issnl_get(8755999)) -- returns 8755-9994
-* SELECT lib.issn_convert(lib.issnl_get(115))     -- returns 0000-0671
+* SELECT lib.issnl_n2c(8755999);     -- returns 8755999
+* SELECT lib.issnl_n2c('8755-9994'); -- returns 8755999
+* SELECT lib.issnl_n2c(115);         -- returns 67
+* SELECT lib.issn_cast(lib.issnl_n2c(8755999)) -- returns 8755-9994
+* SELECT lib.issn_cast(lib.issnl_n2c(115))     -- returns 0000-0671
 
 ### With webservice ###
-Standard (binding) operations for an URN resolution,
+Standard (binding) operations for an URN resolution, inspired in the RFC2169 jargon,
 
 * Standard resolution = to retrieve catalographic information of the journal. Is beyond the scope of this project, but is the recommended endpoint.
-* N2N = return the ISSN-L of a URN
-* N2U = return the main URL of the journal
-* N2Ns = return the ISSNs of the journal specified by a ISSN
+* N2C = return the canonic (preferred) URN of a URN. ISSN-L is the "canonic" of a "free ISSN".
+* N2U = return the URL of a URN. The main URL of the ISSN's journal. 
+* N2Ns = return the set of liked ISSNs of the journal (specified by any of its ISSNs).
+* N2Us = return all the URLs of the ISSN's journal.
+* ...
 
-Use "xws." for XML-webservice, "jws." for JSON-webservice.
+At a webservice's endpoint, ex. `http://ws.myDomain/issn-resolver`, use `xws.` for XML-webservice, `jws.` for JSON-webservice.
 
 **Standard [endpoint](http://www.w3.org/TR/wsdl20/#Endpoint) rule syntax**:
 
@@ -157,16 +160,6 @@ RewriteRule . - [L]
 # If we reach here, this means it's not a file or folder, we can rewrite...
 RewriteRule ^(?:urn:(issn):)?([0-9][\d\-]*X?)$                           index.php?cmd=std&urn_schema=$1&q=$2 [L]
 RewriteRule ^(n2ns?|n2us?|isn|isc)/(?:urn:(issn):)?([0-9][\d\-]*X?)$     index.php?cmd=$1&urn_schema=$2&q=$3 [L]
-
-<filesMatch "\.(html|htm|js|css|php|py)$">
-FileETag None
-<ifModule mod_headers.c>
-  Header unset ETag
-  Header set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
-  Header set Pragma "no-cache"
-  Header set Expires "Wed, 11 Jan 1984 05:00:00 GMT"
-</ifModule>
-</filesMatch>
 ```
 
 ### PHP webservices ###

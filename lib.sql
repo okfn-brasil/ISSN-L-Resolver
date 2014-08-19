@@ -3,9 +3,14 @@
 -- v1.0-2014 of https://github.com/ppKrauss/ISSN-L-resolver 
 --
 
+-- -- -- -- -- -- -- -- -- -- --
+-- text ISSN util functions   -- 
 
-CREATE OR REPLACE FUNCTION lib.issn_format(text)
-  RETURNS text AS
+CREATE FUNCTION lib.issn_format(text)
+  -- 
+  -- Transform a "free ISSN" string in a well-formated standard one.
+  --
+  RETURNS text AS       -- a formated ISSN
 $func$
   SELECT CASE WHEN $1 is null OR trim($1)='' THEN NULL 
          ELSE regexp_replace(upper(regexp_replace($1, '[\- ]+', '')), '^(.{4,4})(.{4,4})', '\1-\2')
@@ -13,8 +18,11 @@ $func$
 $func$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION lib.issn_check(issn text)
-  RETURNS boolean AS
+CREATE FUNCTION lib.issn_check(issn text)
+  -- 
+  -- Checks the check digit of a ISSN string (free or formated).
+  --
+  RETURNS boolean AS    -- true when check digit is correct
 $func$
 DECLARE 
   pos INTEGER;
@@ -22,7 +30,7 @@ DECLARE
   sum INTEGER DEFAULT 0;
   weight INTEGER[] DEFAULT '{8,7,6,5,4,3,2,1}';
   digits INTEGER DEFAULT 1;
-BEGIN 
+BEGIN
   issn := upper(translate(ISSN, '-', '')); -- without hiphen
   IF issn IS NULL or length(issn)!=8 THEN
     return NULL; -- error
@@ -38,18 +46,29 @@ BEGIN
     END IF;
   END LOOP;
   IF digits <> 9 THEN
-    RETURN 'f';
+    RETURN false;
   ELSE
     RETURN (sum % 11) = 0;
   END IF;
 END;
 $func$ LANGUAGE PLpgSQL IMMUTABLE;
 
--- int functions -- 
+CREATE FUNCTION lib.issn_cast(text) RETURNS int AS $func$
+  -- 
+  -- Converts a "free ISSN string" into a integer ISSN.
+  --  
+  SELECT  substr(translate(trim($1), '-', ''),1,7)::int
+$func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION lib.issn_digit8(int)
-  -- calculates the "check digit" of an integer ISSN
-  RETURNS CHAR AS -- digit
+
+-- -- -- -- -- -- -- -- -- --
+-- int ISSN util functions -- 
+
+CREATE FUNCTION lib.issn_digit8(int)
+  -- 
+  -- Calculates the "check digit" of an integer ISSN.
+  --
+  RETURNS CHAR AS       -- check digit
 $func$
 DECLARE 
   ISSN VARCHAR;
@@ -81,20 +100,52 @@ BEGIN
 END;
 $func$ LANGUAGE PLpgSQL IMMUTABLE;
 
-
-CREATE OR REPLACE FUNCTION lib.issn_convert(int)  RETURNS text AS $func$
-  -- converts an "integer ISSN" into a standard ISSN
+CREATE FUNCTION lib.issn_cast(int)  RETURNS text AS $func$
+  -- 
+  -- Converts an "integer ISSN" into a standard text ISSN.
+  -- Must be used only for database's oficial ISSNs.
+  --  
   SELECT trim(to_char($1, '0000-000')||lib.issn_digit8($1));
 $func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION lib.issnl_get(int)  RETURNS int AS $func$
-  -- returns the integer ISSN-L of any "integer ISSN"  
-  -- USE lib.issn_convert(lib.issnl_get(issn))
+
+-- -- -- -- -- -- -- -- -- --
+-- ISSN resolving services -- 
+
+CREATE FUNCTION lib.issn_N2C(int)  RETURNS int AS $func$
+  -- 
+  -- Returns the integer ISSN-L of any integer ISSN. 
+  -- Returns NULL if the input not exists. 
+  -- NOTE: Is a "N2N service" in the RFC2169 jargon, 
+  --       but specifically a "N2C" because returns the Canonic URN.
+  --
   SELECT issn_l FROM lib.issn_l WHERE issn=$1;
 $func$ LANGUAGE SQL IMMUTABLE;
+CREATE FUNCTION lib.issn_N2C(text)  RETURNS int AS $func$
+  -- 
+  -- Same as lib.issn_N2C(int), but casting text inputs. 
+  -- Overloads the main function.
+  --
+  SELECT lib.issn_N2C( lib.issn_cast($1) );
+$func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION lib.issnl_get(text)  RETURNS text AS $func$
-  -- returns the ISSN-L of any ISSN  
-  select lib.issn_convert(lib.issnl_get(  substr(translate(trim($1), '-', ''),1,7)::int  ))
+
+CREATE FUNCTION lib.issn_N2Ns(int)  RETURNS int[] AS $func$
+  -- 
+  -- Returns all ISSNs linked to a ISSN. 
+  -- Returns NULL if the input not exists. 
+  -- Is a "N2Ns service" in the RFC2169 jargon.
+  -- NOTE: very slow, even when indexed,
+  --       CREATE UNIQUE INDEX issn_idx ON lib.issn_l(issn);
+  --
+  SELECT array_agg(issn) 
+  FROM lib.issn_l 
+  WHERE issn_l=lib.issn_N2C($1);
+$func$ LANGUAGE SQL IMMUTABLE;
+CREATE FUNCTION lib.issn_N2Ns(text)  RETURNS int[] AS $func$
+  -- 
+  -- Overloads the main function by casting for text inputs.
+  --
+  SELECT lib.issn_N2Ns( lib.issn_cast($1) );
 $func$ LANGUAGE SQL IMMUTABLE;
 
