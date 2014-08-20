@@ -47,6 +47,22 @@ With `issnltables2sql.php` you can convert the file into SQL and then run `psql`
 
 ## Resolving ##
 The "ISSN resolver" is a simple information retrivial service that returns integer or canonical ISSNs as response. 
+The resolution operation names wasinspired in the RFC2169 jargon, for generic URNs,
+
+* info (default) = retrieves catalographic card information of the URN.
+* N2C = returns the canonical (preferred) URN of an input-URN.
+* N2U = returns the URL of an input-URN.
+* N2Ns = returns a set of URNs related to the input-URN. 
+* N2Us = returns all the URLs related to the input-URN.
+* ...
+
+The letters in these *standard operation names* are used in the following sense:
+
+ * "C": the canonic URN string (the "official string" and unique identifier);
+ * "N": URN, *canonical* or *"reference URN"* (a simplified non-ambiguous version of the canonical one);
+ * "U": URL;
+ * "is": "isX" stands "is a kind of X" or "is really a X";
+ * "2": stands "to", for convertion services.
 
 ### With SQL ###
 
@@ -60,14 +76,6 @@ Use the function `lib.issnl_n2c()` ... Examples:
   SELECT lib.issn_cast(lib.issnl_n2c(115));     -- returns 0000-0671
 ```
 ### With webservice ###
-Standard (binding) operations for an URN resolution, inspired in the RFC2169 jargon,
-
-* Standard resolution = to retrieve catalographic information of the journal. Is beyond the scope of this project, but is the recommended endpoint.
-* N2C = return the canonic (preferred) URN of a URN. ISSN-L is the "canonic" of a "free ISSN".
-* N2U = return the URL of a URN. The main URL of the ISSN's journal. 
-* N2Ns = return the set of liked ISSNs of the journal (specified by any of its ISSNs).
-* N2Us = return all the URLs of the ISSN's journal.
-* ...
 
 At a webservice's endpoint, ex. `http://ws.myDomain/issn-resolver`, use `xws.` for XML-webservice, `jws.` for JSON-webservice.
 
@@ -111,21 +119,13 @@ Example: `http://issn.jws.example.org/1234-9223` returns the default operation f
 
 **Standard operations**: a [WSDL file](https://en.wikipedia.org/wiki/WSDL#Example_WSDL_file) describes services as collections of network endpoints, so, in the same intention, this document describes a set of interoperable endpoints focusing on the handling of ISSN-URNs. As suggested by the [old IETF's RFC-2169](http://tools.ietf.org/html/rfc2169), some typical *"ISSN resolution"* services can be offered, in response to the `<query>`,
 
- * *N2N*: the *ISSN-L* of the input. See SQL `lib.issnl_get()`.
- * *N2Ns*: all the ISSNs grouped by a ISSN-L associated with the input. See SQL `lib.issnl_getall()`.
+ * *N2C*: the *ISSN-L* of the input. See SQL `lib.issnl_n2c()`.
+ * *N2Ns*: all the ISSNs grouped by a ISSN-L associated with the input. See SQL `lib.issnl_n2ns()`.
  * *N2U*: the "journal's official URL", where "official" is in the context of the webservice server entity. No implementation here, only an illustrative operation.
  * *N2Us*: all the "journal's URLs", when exist more than one. No implementation here, only an illustrative operation.
  * *isN*: check if a query string is a valid ISSN (registered in the database).
  * *isC*: like *isN* but also checking format. See SQL `lib.issn_check()`.
- * *info*: the *card catalog* of the object pointed by the URN.
-  
-The letters in these *standard operation names* are used in the following sense:
-
- * "C": the canonic URN string (the "official string" and unique identifier);
- * "N": URN, *canonical* or *"reference URN"* (a simplified non-ambiguous version of the canonical one);
- * "U": URL;
- * "is": "isX" stands "is a kind of X" or "is really a X";
- * "2": stands "to", for convertion services. 
+ * *info*: the *card catalog* of the object pointed by the URN. Illustrative.
 
 These basic ISSN resolution operations, solves most of the commom interoperability problems. Of course, any other simple (1 operand) operation can be add as new `op-name` or a (2 or more operands) as a complete URL.
 
