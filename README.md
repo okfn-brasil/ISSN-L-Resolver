@@ -81,8 +81,8 @@ Typical uses for resolver functions:
   -- returns            67          8755-9994
   SELECT lib.issn_n2c(8755999);     SELECT lib.issn_cast(lib.issnl_n2c(115));
   -- returns           8755999      0000-0671
-  SELECT lib.issn_n2ns(8755999);    
-  -- returns        {8755999}
+  SELECT lib.issn_n2ns(8755999);    SELECT lib.issn_xservice(8755999,'n2ns');
+  -- returns          {8755999}     <ret status="sucess"><issn>8755-9994</issn></ret>
   SELECT lib.issn_n2ns_formated(115);
   -- returns {0000-0671,0000-1155,0065-759X,0065-910X,0068-0540,0074-6827,1067-8166}
 ```

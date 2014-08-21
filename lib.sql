@@ -248,7 +248,7 @@ BEGIN
    WHEN cmd='n2ns' THEN 
      (
       SELECT xmlelement(  name ret,  xmlattributes('sucess' as status),  xmlagg(xmlelement(name issn,i))  )
-      FROM  (SELECT unnest( lib.issn_n2ns_formated(115) ) as i ) as t
+      FROM  (SELECT unnest( lib.issn_n2ns_formated($1) ) as i ) as t
      )
    ELSE
         xmlelement(  name ret,  xmlattributes('error' as status, 1 as cod), 'unknowing command' )
