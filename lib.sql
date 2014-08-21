@@ -1,5 +1,6 @@
 --
--- lib.issnl_get() and some util functions
+-- lib.issnl_get() and some util functions.
+-- See Radme.md for CREATE TABLE and INDEX. Using "library" (lib) schema.
 -- v1.0-2014 of https://github.com/ppKrauss/ISSN-L-resolver 
 --
 
@@ -109,22 +110,71 @@ CREATE FUNCTION lib.issn_cast(int)  RETURNS text AS $func$
 $func$ LANGUAGE SQL IMMUTABLE;
 
 
--- -- -- -- -- -- -- -- -- --
--- ISSN resolving services -- 
+-- -- -- -- -- -- -- -- -- -- -- --
+-- ISSN resolving services       -- 
+-- (complete and symmetric set)  -- 
+-- isC, isN, N2C, N2Ns, N2Ns_formated
+
+CREATE FUNCTION lib.issn_isC(int)  RETURNS smallint AS $func$
+  -- 
+  -- Returns 1 when input is an ISSN-L.
+  -- Only mirros or authority can return (coalesced) 0, 
+  -- other databases must return NULL when not found.
+  --
+  SELECT 1::smallint FROM lib.issn_l WHERE issn_l=$1;
+    -- or replace by (for authority only): 
+    -- SELECT COALESCE((SELECT 1::smallint as r FROM lib.issn_l WHERE issn_l=$1), 0::smallint);
+$func$ LANGUAGE SQL IMMUTABLE;
+
+CREATE FUNCTION lib.issn_isC(text)  RETURNS smallint AS $func$
+  -- 
+  -- Same as lib.issn_isC(int), but casting and checking text input.
+  -- Returns 2 when digit is invalid or has no check-digit.
+  --
+  SELECT CASE WHEN NOT(lib.issn_check($1)) THEN r+1::smallint ELSE r END
+  FROM (
+    SELECT lib.issn_isC( lib.issn_cast($1) ) as r
+  ) as t;
+$func$ LANGUAGE SQL IMMUTABLE;
+
+
+CREATE FUNCTION lib.issn_isN(int)  RETURNS smallint AS $func$
+  -- 
+  -- Returns 1 when input is an (any) ISSN.
+  -- Only mirros or authority can return (coalesced) 0, 
+  -- other databases must return NULL when not found.
+  -- NOTE: "isN service" in the RFC2169 jargon.
+  --
+  SELECT 1::smallint FROM lib.issn_l WHERE issn=$1;
+    -- or replace by (for authority only): 
+    -- SELECT COALESCE((SELECT 1::smallint as r FROM lib.issn_l WHERE issn=$1), 0::smallint);
+$func$ LANGUAGE SQL IMMUTABLE;
+
+CREATE FUNCTION lib.issn_isN(text)  RETURNS smallint AS $func$
+  -- 
+  -- Same as lib.issn_isN(int), but casting and checking text input.
+  -- Returns 2 when digit is invalid or has no check-digit.
+  --
+  SELECT CASE WHEN NOT(lib.issn_check($1)) THEN r+1::smallint ELSE r END
+  FROM (
+    SELECT lib.issn_isN( lib.issn_cast($1) ) as r
+  ) as t;
+$func$ LANGUAGE SQL IMMUTABLE;
+
 
 CREATE FUNCTION lib.issn_N2C(int)  RETURNS int AS $func$
   -- 
   -- Returns the integer ISSN-L of any integer ISSN. 
   -- Returns NULL if the input not exists. 
-  -- NOTE: Is a "N2N service" in the RFC2169 jargon, 
+  -- NOTE: is a "N2N service" in the RFC2169 jargon, 
   --       but specifically a "N2C" because returns the Canonic URN.
   --
   SELECT issn_l FROM lib.issn_l WHERE issn=$1;
 $func$ LANGUAGE SQL IMMUTABLE;
+
 CREATE FUNCTION lib.issn_N2C(text)  RETURNS int AS $func$
   -- 
   -- Same as lib.issn_N2C(int), but casting text inputs. 
-  -- Overloads the main function.
   --
   SELECT lib.issn_N2C( lib.issn_cast($1) );
 $func$ LANGUAGE SQL IMMUTABLE;
@@ -135,17 +185,81 @@ CREATE FUNCTION lib.issn_N2Ns(int)  RETURNS int[] AS $func$
   -- Returns all ISSNs linked to a ISSN. 
   -- Returns NULL if the input not exists. 
   -- Is a "N2Ns service" in the RFC2169 jargon.
-  -- NOTE: very slow, even when indexed,
-  --       CREATE UNIQUE INDEX issn_idx ON lib.issn_l(issn);
-  --
-  SELECT array_agg(issn) 
+  -- NOTE: very slow if not using issn_idx1.
+  --       
+  SELECT array_agg(issn ORDER BY issn) 
   FROM lib.issn_l 
   WHERE issn_l=lib.issn_N2C($1);
 $func$ LANGUAGE SQL IMMUTABLE;
+
 CREATE FUNCTION lib.issn_N2Ns(text)  RETURNS int[] AS $func$
   -- 
-  -- Overloads the main function by casting for text inputs.
+  -- Same as lib.issn_N2Ns(int), but casting text input. 
   --
   SELECT lib.issn_N2Ns( lib.issn_cast($1) );
+$func$ LANGUAGE SQL IMMUTABLE;
+
+
+CREATE FUNCTION lib.issn_N2Ns_formated(int)  RETURNS text[] AS $func$
+  -- 
+  -- Same as lib.issn_N2Ns(int), but returning text formated ISSNs
+  --
+  SELECT array_agg(lib.issn_cast(issn) ORDER BY issn) 
+  FROM lib.issn_l 
+  WHERE issn_l=lib.issn_N2C($1);
+$func$ LANGUAGE SQL IMMUTABLE;
+
+CREATE FUNCTION lib.issn_N2Ns_formated(text)  RETURNS text[] AS $func$
+  -- 
+  -- Same as lib.issn_N2Ns_formated(int), but casting text input. 
+  --
+  SELECT lib.issn_N2Ns_formated( lib.issn_cast($1) );
+$func$ LANGUAGE SQL IMMUTABLE;
+
+
+-- -- -- -- -- -- -- -- -- -- --
+-- Services, X=XML and J=JSON --
+
+CREATE FUNCTION lib.issn_xservice(
+  -- 
+  -- Performs a "lib.issn_*()" function and returns into a XML.
+  --
+  int,        -- $1 the command argument
+  cmd   text  -- $2 the command (isC, isN, N2C, N2Ns, N2Ns_formated)
+)  RETURNS xml  AS $func$
+BEGIN
+  cmd := lower(cmd);
+  RETURN 
+  CASE WHEN cmd='isc' THEN 
+     xmlelement(  name ret,  
+                  xmlattributes('sucess' as status), 
+                  COALESCE(lib.issn_isc($1)::text,'') 
+     )
+   WHEN cmd='isn' THEN
+     xmlelement(  name ret,  
+                  xmlattributes('sucess' as status), 
+                  COALESCE(lib.issn_isn($1)::text,'') 
+     )
+   WHEN cmd='n2c' THEN
+     xmlelement(  name ret,  
+                  xmlattributes('sucess' as status), 
+                  COALESCE(lib.issn_cast(lib.issn_n2c($1)),'') 
+     )
+   WHEN cmd='n2ns' THEN 
+     (
+      SELECT xmlelement(  name ret,  xmlattributes('sucess' as status),  xmlagg(xmlelement(name issn,i))  )
+      FROM  (SELECT unnest( lib.issn_n2ns_formated(115) ) as i ) as t
+     )
+   ELSE
+        xmlelement(  name ret,  xmlattributes('error' as status, 1 as cod), 'unknowing command' )
+   END; -- case
+END;
+$func$ LANGUAGE plpgsql IMMUTABLE;
+
+CREATE FUNCTION lib.issn_xservice(text,text)  RETURNS xml AS $func$
+  -- 
+  -- Same as lib.issn_xws(int,text), but casting text input. 
+  --
+  SELECT lib.issn_xservice( lib.issn_cast($1), $2 );
 $func$ LANGUAGE SQL IMMUTABLE;
 

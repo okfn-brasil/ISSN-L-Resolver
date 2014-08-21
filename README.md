@@ -1,15 +1,17 @@
 ISSN-L-resolver
 ===============
 
-An **ISSN** is a standard public [opaque identifier](https://en.wikipedia.org/wiki/Unique_identifier) for [journals](https://en.wikipedia.org/wiki/Periodical_publication), assigned by the [ISSN-ORG authority](http://www.issn.org). It's most frequent use, is to be a short alias name for the [systematic name](https://en.wikipedia.org/wiki/Systematic_name) of the journal, uniquely identifying  the publication content (*ISSN-L*) or specific [media type](https://en.wikipedia.org/wiki/Media_(communication)) of the publication (other ISSNs like *e-ISSN* and *p-ISSN*).
+An **ISSN** is a standard public [opaque identifier](https://en.wikipedia.org/wiki/Unique_identifier) for [journals](https://en.wikipedia.org/wiki/Periodical_publication), assigned by the [ISSN-ORG authority](http://www.issn.org). It's most frequent use, is to be a short alias name for the [systematic name](https://en.wikipedia.org/wiki/Systematic_name) of the journal, uniquely identifying  the publication content (*ISSN-L*) or specific [media type](https://en.wikipedia.org/wiki/Media_(communication)) of the publication (other ISSNs like *eletronic-ISSN* and *print-ISSN*).
 
-The **ISSN-L resolver** converts, with SQL, any ISSN to it's correspondent [ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN), using a  lightweight structure,
+The **ISSN-L resolver** converts, with SQL, any ISSN to it's correspondent [ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN) ("linking ISSN"), using a  lightweight structure,
 
   ````sql
    CREATE TABLE lib.issn_l (
-      issn integer not null primary key, issn_l integer not null
+      issn integer NOT NULL PRIMARY KEY,
+      issn_l integer NOT NULL
     );
-    -- about need for indexes, see comments at lib.issn_N2Ns() function.
+   CREATE INDEX issn_idx1 ON lib.issn_l(issn_l);     
+   -- about need for indexes, see lib.issn_N2Ns() function.
   ````
 
 The core of the *ISSN-L resolver* solution is a SQL script writed for PostgreSQL, in PL/pgSQL language. It  offer also funcions to format and to validate string-ISSNs of the front-end, webservices or back-services.
@@ -47,34 +49,44 @@ With `issnltables2sql.php` you can convert the file into SQL and then run `psql`
 
 ## Resolving ##
 The "ISSN resolver" is a simple information retrivial service that returns integer or canonical ISSNs as response. 
-The resolution operation names wasinspired in the RFC2169 jargon, for generic URNs,
+The resolution operation names was inspired in the [RFC2169 jargon](http://tools.ietf.org/html/rfc2169), for generic URNs,
 
-* info (default) = retrieves catalographic card information of the URN.
-* N2C = returns the canonical (preferred) URN of an input-URN.
-* N2U = returns the URL of an input-URN.
+* N2L  = returns the main URL of an input-URN.
 * N2Ns = returns a set of URNs related to the input-URN. 
-* N2Us = returns all the URLs related to the input-URN.
-* ...
+* N2Ls = returns all the URLs related to the input-URN.
+* N2C  = returns the canonical (preferred) URN of an input-URN.
+* list = retrieves all component URNs (or its metadata), when component entities exists.
+* info (default) = retrieves catalographic information or metadata of the (entity of the) URN.
 
 The letters in these *standard operation names* are used in the following sense:
 
- * "C": the canonic URN string (the "official string" and unique identifier);
+ * "C": the canonic URN string (the "official string" and unique identifier); non-RFC2169 jargon;
  * "N": URN, *canonical* or *"reference URN"* (a simplified non-ambiguous version of the canonical one);
- * "U": URL;
+ * "L": URL (main URL is a http and secondary can by also ftp and mailto URLs, see RFC2368)
  * "is": "isX" stands "is a kind of X" or "is really a X";
  * "2": stands "to", for convertion services.
 
 ### With SQL ###
 
-Use the function `lib.issnl_n2c()` ... Examples:
+Typical uses for resolver functions:
 
 ```sql
-  SELECT lib.issnl_n2c(8755999);     -- returns 8755999
-  SELECT lib.issnl_n2c('8755-9994'); -- returns 8755999
-  SELECT lib.issnl_n2c(115);         -- returns 67
-  SELECT lib.issn_cast(lib.issnl_n2c(8755999)); -- returns 8755-9994
-  SELECT lib.issn_cast(lib.issnl_n2c(115));     -- returns 0000-0671
+  SELECT lib.issn_isC(115);         SELECT lib.issn_isC('8755-9994');
+  -- returns          NULL          1
+  SELECT lib.issn_isN(115);         SELECT lib.issn_isN('8755-9995');
+  -- returns             1          2
+  SELECT lib.issn_n2c(8755999);     SELECT lib.issn_n2c('8755-9994');
+  -- returns           8755999      8755999
+  SELECT lib.issn_n2c(115);         SELECT lib.issn_cast(lib.issnl_n2c(8755999));
+  -- returns            67          8755-9994
+  SELECT lib.issn_n2c(8755999);     SELECT lib.issn_cast(lib.issnl_n2c(115));
+  -- returns           8755999      0000-0671
+  SELECT lib.issn_n2ns(8755999);    
+  -- returns        {8755999}
+  SELECT lib.issn_n2ns_formated(115);
+  -- returns {0000-0671,0000-1155,0065-759X,0065-910X,0068-0540,0074-6827,1067-8166}
 ```
+
 ### With webservice ###
 
 At a webservice's endpoint, ex. `http://ws.myDomain/issn-resolver`, use `xws.` for XML-webservice, `jws.` for JSON-webservice.
