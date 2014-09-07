@@ -77,9 +77,9 @@ Typical uses for resolver functions:
   -- returns             1          2
   SELECT lib.issn_n2c(8755999);     SELECT lib.issn_n2c('8755-9994');
   -- returns           8755999      8755999
-  SELECT lib.issn_n2c(115);         SELECT lib.issn_cast(lib.issnl_n2c(8755999));
+  SELECT lib.issn_n2c(115);         SELECT lib.issn_cast(lib.issn_n2c(8755999));
   -- returns            67          8755-9994
-  SELECT lib.issn_n2c(8755999);     SELECT lib.issn_cast(lib.issnl_n2c(115));
+  SELECT lib.issn_n2c(8755999);     SELECT lib.issn_cast(lib.issn_n2c(115));
   -- returns           8755999      0000-0671
   SELECT lib.issn_n2ns(8755999);    SELECT lib.issn_xservice(8755999,'n2ns');
   -- returns          {8755999}     <ret status="sucess"><issn>8755-9994</issn></ret>
