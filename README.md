@@ -17,13 +17,19 @@ The **ISSN-L resolver** converts, with SQL, any ISSN to it's correspondent [ISSN
 The core of the *ISSN-L resolver* solution is a SQL script writed for PostgreSQL, in PL/pgSQL language. It  offer also funcions to format and to validate string-ISSNs of the front-end, webservices or back-services.
 
 ## Synopsis ##
-The project have 3 issues:
+The project have two main issues:
 
- 1. A PHP script that converts the (updated) "ISSN to ISSN-L" TXT table, into a SQL table of integers (ISSN numbers without the *check digit*).
+  * A (PHP) "installer", that converts the (updated) "ISSN to ISSN-L" TXT table, into a SQL table of integers (ISSN numbers without the *check digit*).
+  * A webservice for ISSN resolution.
 
- 2. The `lib.sql`, that offers a resolver and all king of util convertion and ISSN handling, inclung *check digit* reconstruction.
+The webservce was implemented in three pieces:
 
- 3. An Apache2 aplication (here with a PHP example) to expose the resolution into a simple and friendly set of web-service endpoints.
+ 1. The `lib.sql`, that offers a resolver with all kind of "resolution operations" ([RFC2169](http://tools.ietf.org/html/rfc2169)'s inspired orthogonal instruction set), convertion and ISSN handling.
+
+ 2. An Apache2 application (here `.httpAccess` pointing to the PHP example) to expose the resolution into a simple and friendly set of web-service [endpoints](http://www.ibm.com/developerworks/webservices/library/ws-restwsdl/), encouraging its use as [intelligible permalinks](https://en.wikipedia.org/wiki/Permalink).
+
+ 3. PHP script, the webservice controller, that intermediate Apache and SQL.
+
 
 ## Populating ##
 
