@@ -119,11 +119,9 @@ CREATE FUNCTION lib.issn_isC(int)  RETURNS smallint AS $func$
   -- 
   -- Returns 1 when input is an ISSN-L.
   -- Only mirros or authority can return (coalesced) 0, 
-  -- other databases must return NULL when not found.
-  --
-  SELECT 1::smallint FROM lib.issn_l WHERE issn_l=$1;
-    -- or replace by (for authority only): 
-    -- SELECT COALESCE((SELECT 1::smallint as r FROM lib.issn_l WHERE issn_l=$1), 0::smallint);
+  -- other databases must return NULL when not found...
+  -- ... but not so practical: SELECT 1::smallint FROM lib.issn_l WHERE issn_l=$1;
+  SELECT COALESCE((SELECT 1::smallint as r FROM lib.issn_l WHERE issn_l=$1), 0::smallint);
 $func$ LANGUAGE SQL IMMUTABLE;
 
 CREATE FUNCTION lib.issn_isC(text)  RETURNS smallint AS $func$
@@ -142,12 +140,10 @@ CREATE FUNCTION lib.issn_isN(int)  RETURNS smallint AS $func$
   -- 
   -- Returns 1 when input is an (any) ISSN.
   -- Only mirros or authority can return (coalesced) 0, 
-  -- other databases must return NULL when not found.
+  -- other databases must return NULL when not found...
+  -- ... but not so practical:  SELECT 1::smallint FROM lib.issn_l WHERE issn=$1;
   -- NOTE: "isN service" in the RFC2169 jargon.
-  --
-  SELECT 1::smallint FROM lib.issn_l WHERE issn=$1;
-    -- or replace by (for authority only): 
-    -- SELECT COALESCE((SELECT 1::smallint as r FROM lib.issn_l WHERE issn=$1), 0::smallint);
+  SELECT COALESCE((SELECT 1::smallint as r FROM lib.issn_l WHERE issn=$1), 0::smallint);
 $func$ LANGUAGE SQL IMMUTABLE;
 
 CREATE FUNCTION lib.issn_isN(text)  RETURNS smallint AS $func$
