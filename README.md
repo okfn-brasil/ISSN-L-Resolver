@@ -1,7 +1,7 @@
 ISSN-L-resolver
 ===============
 
-An **ISSN** is a standard public [opaque identifier](https://en.wikipedia.org/wiki/Unique_identifier) for [journals](https://en.wikipedia.org/wiki/Periodical_publication), assigned by the [ISSN-ORG authority](http://www.issn.org). It's most frequent use, is to be a short alias name for the [systematic name](https://en.wikipedia.org/wiki/Systematic_name) of the journal, uniquely identifying  the publication content (*ISSN-L*) or specific [media type](https://en.wikipedia.org/wiki/Media_(communication)) of the publication (other ISSNs like *eletronic-ISSN* and *print-ISSN*).
+**ISSN** is a standard public [opaque identifier](https://en.wikipedia.org/wiki/Unique_identifier) for [journals](https://en.wikipedia.org/wiki/Periodical_publication), assigned by the [ISSN-ORG authority](http://www.issn.org). It's most frequent use, is to be a short alias name for the [systematic name](https://en.wikipedia.org/wiki/Systematic_name) of the journal, uniquely identifying  the publication content (*ISSN-L*) or specific [media type](https://en.wikipedia.org/wiki/Media_(communication)) of the publication (other ISSNs like *eletronic-ISSN* and *print-ISSN*).
 
 The **ISSN-L resolver** converts, with SQL, any ISSN to it's correspondent [ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN) ("linking ISSN"), using a  lightweight structure,
 
