@@ -1,9 +1,9 @@
 ISSN-L-resolver
 ===============
 
-**ISSN** is a standard public [opaque identifier](https://en.wikipedia.org/wiki/Unique_identifier) for [journals](https://en.wikipedia.org/wiki/Periodical_publication), assigned by the [ISSN-ORG authority](http://www.issn.org). It's most frequent use, is to be a short alias name for the [systematic name](https://en.wikipedia.org/wiki/Systematic_name) of the journal, uniquely identifying  the publication content (*ISSN-L*) or specific [media type](https://en.wikipedia.org/wiki/Media_(communication)) of the publication (other ISSNs like *eletronic-ISSN* and *print-ISSN*).
+**ISSN** is a standard public [opaque identifier](https://en.wikipedia.org/wiki/Unique_identifier) for [journals](https://en.wikipedia.org/wiki/Periodical_publication), assigned by the [ISSN-ORG authority](http://www.issn.org). Its main function is to be a short alias for the [systematic name](https://en.wikipedia.org/wiki/Systematic_name) of the journal, uniquely identifying the publication content (*ISSN-L*) or a specific [media type](https://en.wikipedia.org/wiki/Media_(communication)) of the publication. In the latter case, for example, the same journal can have an *eletronic-ISSN* and a *print-ISSN*, which identifies its electronic and printed publications separately.
 
-The **ISSN-L resolver** converts, with SQL, any ISSN to it's correspondent [ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN) ("linking ISSN"), using a  lightweight structure,
+The **ISSN-L resolver** converts any ISSN to its corresponding [ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN) ("linking ISSN") using a lightweight SQL structure:
 
   ````sql
    CREATE TABLE lib.issn_l (
@@ -14,21 +14,21 @@ The **ISSN-L resolver** converts, with SQL, any ISSN to it's correspondent [ISSN
    -- about need for indexes, see lib.issn_N2Ns() function.
   ````
 
-The core of the *ISSN-L resolver* solution is a SQL script writed for PostgreSQL, in PL/pgSQL language. It  offer also funcions to format and to validate string-ISSNs of the front-end, webservices or back-services.
+The core of the *ISSN-L resolver* solution is a SQL script wrote for PostgreSQL, in PL/pgSQL language. It also offers functions to format and validate ISSN strings from the front-end, webservices or back-end.
 
 ## Synopsis ##
-The project have two main issues:
+The project has two main issues:
 
-  * A (PHP) "installer", that converts the (updated) "ISSN to ISSN-L" TXT table, into a SQL table of integers (ISSN numbers without the *check digit*).
+  * A (PHP) "installer" that converts the (updated) "ISSN to ISSN-L" TXT table into a SQL table of integers (ISSN numbers without the *check digit*).
   * A webservice for ISSN resolution.
 
-The webservce was implemented in three pieces:
+The webservice was implemented in three parts:
 
- 1. The `lib.sql`, that offers a resolver with all kind of "resolution operations" ([RFC2169](http://tools.ietf.org/html/rfc2169)'s inspired orthogonal instruction set), convertion and ISSN handling.
+ 1. The `lib.sql`, which offers a resolver with all "resolution operations" ([RFC2169](http://tools.ietf.org/html/rfc2169) inspired orthogonal instruction set), a converter and an ISSN handling system.
 
- 2. An Apache2 application (here `.httpAccess` pointing to the PHP example) to expose the resolution into a simple and friendly set of web-service [endpoints](http://www.ibm.com/developerworks/webservices/library/ws-restwsdl/), encouraging its use as [intelligible permalinks](https://en.wikipedia.org/wiki/Permalink).
+ 2. An Apache2 application (here `.httpAccess` pointing to the PHP example) to expose the resolution into a simple and friendly set of webservice [endpoints](http://www.ibm.com/developerworks/webservices/library/ws-restwsdl/), encouraging its use as [intelligible permalinks](https://en.wikipedia.org/wiki/Permalink).
 
- 3. PHP script, the webservice controller, that intermediate Apache and SQL.
+ 3. The webservice controller, implemented as a PHP script, that mediate Apache and SQL.
 
 
 ## Populating ##
