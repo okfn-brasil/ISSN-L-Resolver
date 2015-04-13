@@ -183,3 +183,6 @@ RewriteRule ^(n2ns?|n2us?|isn|isc)/(?:urn:(issn):)?([0-9][\d\-]*X?)$     index.p
 
 ### PHP webservices ###
 ... index.php ...
+
+For tuning and performance, see "microservices strategies" as http://nginx.com/blog/realtime-applications-nginx/ 
+
