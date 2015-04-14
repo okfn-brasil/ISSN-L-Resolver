@@ -93,7 +93,7 @@ Typical uses for resolver functions:
   -- returns {0000-0671,0000-1155,0065-759X,0065-910X,0068-0540,0074-6827,1067-8166}
 ```
 ### With the DEMO ###
-See  `/demo` folder or a *live demo* at [`cta.if.ufrgs.br/ISSN-L`](http://cta.if.ufrgs.br/ISSN-L/index.php).
+See  `/demo` folder or a *live demo* at  [`xmlfusion.org/demo/urn-microservice`](http://xmlfusion.org/demo/urn-microservice) or [`cta.if.ufrgs.br/ISSN-L`](http://cta.if.ufrgs.br/ISSN-L/index.php).
 
 ### With webservice ###
 

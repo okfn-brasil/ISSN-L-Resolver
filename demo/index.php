@@ -1,13 +1,13 @@
 <?php
 /**
  * DEMO. Lists options and execute.
- * http://localhost/gits/ISSN-L-resolver/webservice/?opname=N2N&sval=87559994
+ * http://localhost/gits/ISSN-L-resolver/webservice/
  */
 
 //CONF
-$PG_CONSTR = 'pgsql:host=localhost;port=5432;dbname=postgres';
-$PG_USER = 'postgres';
-$PG_PW   = '123456';
+$PG_CONSTR = 'pgsql:host=xxx;port=5432;dbname=xxxx';
+$PG_USER = 'xxxx';
+$PG_PW   = 'abcdef';
 // or include('conf.php');
 
 $opname = isset($_GET['opname'])? strtolower(trim($_GET['opname'])): ''; // "N2N" | "N2Ns" | "N2C" | "N2Cs" | "N2U" | "N2Us" | "isN"| "isC" | "info"
