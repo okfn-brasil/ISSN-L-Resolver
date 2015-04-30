@@ -57,10 +57,10 @@ With `issnltables2sql.php` you can convert the file into SQL and then run `psql`
 The "ISSN resolver" is a simple information retrivial service that returns integer or canonical ISSNs as response. 
 The resolution operation names was inspired in the [RFC2169 jargon](http://tools.ietf.org/html/rfc2169), for generic URNs,
 
-* N2L  = returns the main URL of an input-URN.
-* N2Ns = returns a set of URNs related to the input-URN. 
-* N2Ls = returns all the URLs related to the input-URN.
 * N2C  = returns the canonical (preferred) URN of an input-URN.
+* N2Ns = returns a set of URNs related to the input-URN. 
+* N2L  = [not implemented] returns or redirects to the main URL of an input-URN.
+* N2Ls = [not implemented] returns all the URLs related to the input-URN.
 * list = retrieves all component URNs (or its metadata), when component entities exists.
 * info (default) = retrieves catalographic information or metadata of the (entity of the) URN.
 
