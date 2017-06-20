@@ -42,7 +42,7 @@ then, you download a 18Mb zip file,
      issnltables.zip
 
 but only a half (9Mb) is about "ISSN to ISSN-L" table, and, at SQL database, with numbers as integers (4 bytes), you can use less space.
-With `issnltables2sql.php` you can convert the file into SQL and then run `psql` to populate.
+With `issnltables2sql.php` you can convert the file into SQL and then run `psql` to populate. See a test dump  [issnltables.zip](https://github.com/okfn-brasil/videos/raw/master/evento/issnltables.zip)
 
 ### Instructions for populating ###
 Sumary of the shell-script that will following, 
