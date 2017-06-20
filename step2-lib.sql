@@ -278,41 +278,11 @@ BEGIN
    END; -- case
 END;
 $func$ LANGUAGE plpgsql IMMUTABLE;
-CREATE OR REPLACE FUNCTION lib.issn_xservice(text,text)  RETURNS xml AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_xservice(text,text)  RETURNS xml AS $fwrap$
   -- 
   -- Same as lib.issn_xservice(int,text), but casting text input. 
   --
   SELECT lib.issn_xservice( lib.issn_cast($1), $2 );
-$func$ LANGUAGE SQL IMMUTABLE;
+$fwrap$ LANGUAGE SQL IMMUTABLE;
 
 
--- JSON need POstgreSQL 9.2+  --
-
-
-----------------------------------------
---- testing context for integer outoput
-CREATE OR REPLACE FUNCTION issn_tservice_int(char,text,text)  RETURNS INT[] AS $func$
-  -- 
-  -- Performs a "lib.issn_*()" function and returns into a plain text.
-  --
-  int,        -- $1 the command argument
-  cmd   text  -- $2 the command (isC, isN, N2C, N2Ns, N2Ns_formated)
-)  RETURNS text AS $func$
-BEGIN
-  cmd := lower(cmd);
-  RETURN COALESCE(
-  CASE WHEN cmd='isc' THEN  lib.issn_isc($1) 
-       WHEN cmd='isn' THEN  lib.issn_isn($1)
-       WHEN cmd='n2c' THEN  lib.issn_cast(lib.issn_n2c($1))
-  -- erro falta fixar delimitador com join_array     
-       WHEN cmd='n2ns' THEN lib.issn_n2ns_formated($1)
-       ELSE -1
-   END, -2); -- case
-END;
-$func$ LANGUAGE plpgsql IMMUTABLE;
-CREATE OR REPLACE FUNCTION lib.issn_tservice_int(text,text)  RETURNS text AS $func$
-  -- 
-  -- Same as lib.issn_xws(int,text), but casting text input. 
-  --
-  SELECT lib.issn_tservice( lib.issn_cast($1), $2 );
-$func$ LANGUAGE SQL IMMUTABLE;
