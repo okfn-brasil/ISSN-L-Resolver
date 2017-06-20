@@ -4,6 +4,7 @@
 -- v1.0-2014 of https://github.com/ppKrauss/ISSN-L-resolver 
 --
 
+CREATE SCHEMA IF NOT EXISTS lib;  -- general commom library.
 -- -- -- -- -- -- -- -- -- -- --
 -- text ISSN util functions   -- 
 
