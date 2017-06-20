@@ -5,9 +5,9 @@
  */
 
 //CONF
-$PG_CONSTR = 'pgsql:host=xxx;port=5432;dbname=xxxx';
-$PG_USER = 'xxxx';
-$PG_PW   = 'abcdef';
+$PG_CONSTR = 'pgsql:host=postgres;port=5432;dbname=postgres';
+$PG_USER = 'postgres';
+$PG_PW   = 'postgres';
 // or include('conf.php');
 
 $opname = isset($_GET['opname'])? strtolower(trim($_GET['opname'])): ''; // "N2N" | "N2Ns" | "N2C" | "N2Cs" | "N2U" | "N2Us" | "isN"| "isC" | "info"
