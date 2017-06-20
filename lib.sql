@@ -8,7 +8,7 @@ CREATE SCHEMA IF NOT EXISTS lib;  -- general commom library.
 -- -- -- -- -- -- -- -- -- -- --
 -- text ISSN util functions   -- 
 
-CREATE FUNCTION lib.issn_format(text)
+CREATE OR REPLACE FUNCTION lib.issn_format(text)
   -- 
   -- Transform a "free ISSN" string in a well-formated standard one.
   --
@@ -20,7 +20,7 @@ $func$
 $func$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION lib.issn_check(issn text)
+CREATE OR REPLACE FUNCTION lib.issn_check(issn text)
   -- 
   -- Checks the check digit of a ISSN string (free or formated).
   --
@@ -55,7 +55,7 @@ BEGIN
 END;
 $func$ LANGUAGE PLpgSQL IMMUTABLE;
 
-CREATE FUNCTION lib.issn_cast(text) RETURNS int AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_cast(text) RETURNS int AS $func$
   -- 
   -- Converts a "free ISSN string" into a integer ISSN.
   --  
@@ -66,7 +66,7 @@ $func$ LANGUAGE SQL IMMUTABLE;
 -- -- -- -- -- -- -- -- -- --
 -- int ISSN util functions -- 
 
-CREATE FUNCTION lib.issn_digit8(int)
+CREATE OR REPLACE FUNCTION lib.issn_digit8(int)
   -- 
   -- Calculates the "check digit" of an integer ISSN.
   --
@@ -102,7 +102,7 @@ BEGIN
 END;
 $func$ LANGUAGE PLpgSQL IMMUTABLE;
 
-CREATE FUNCTION lib.issn_cast(int)  RETURNS text AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_cast(int)  RETURNS text AS $func$
   -- 
   -- Converts an "integer ISSN" into a standard text ISSN.
   -- Must be used only for database's oficial ISSNs.
@@ -116,7 +116,7 @@ $func$ LANGUAGE SQL IMMUTABLE;
 -- (complete and symmetric set)  -- 
 -- isC, isN, N2C, N2Ns, N2Ns_formated
 
-CREATE FUNCTION lib.issn_isC(int)  RETURNS smallint AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_isC(int)  RETURNS smallint AS $func$
   -- 
   -- Returns 1 when input is an ISSN-L.
   -- Only mirros or authority can return (coalesced) 0, 
@@ -125,7 +125,7 @@ CREATE FUNCTION lib.issn_isC(int)  RETURNS smallint AS $func$
   SELECT COALESCE((SELECT 1::smallint as r FROM lib.issn_l WHERE issn_l=$1 LIMIT 1), 0::smallint);
 $func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE FUNCTION lib.issn_isC(text)  RETURNS smallint AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_isC(text)  RETURNS smallint AS $func$
   -- 
   -- Same as lib.issn_isC(int), but casting and checking text input.
   -- Returns 2 when digit is invalid or has no check-digit.
@@ -137,7 +137,7 @@ CREATE FUNCTION lib.issn_isC(text)  RETURNS smallint AS $func$
 $func$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE FUNCTION lib.issn_isN(int)  RETURNS smallint AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_isN(int)  RETURNS smallint AS $func$
   -- 
   -- Returns 1 when input is an (any) ISSN.
   -- Only mirros or authority can return (coalesced) 0, 
@@ -147,7 +147,7 @@ CREATE FUNCTION lib.issn_isN(int)  RETURNS smallint AS $func$
   SELECT COALESCE((SELECT 1::smallint as r FROM lib.issn_l WHERE issn=$1), 0::smallint);
 $func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE FUNCTION lib.issn_isN(text)  RETURNS smallint AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_isN(text)  RETURNS smallint AS $func$
   -- 
   -- Same as lib.issn_isN(int), but casting and checking text input.
   -- Returns 2 when digit is invalid or has no check-digit.
@@ -159,7 +159,7 @@ CREATE FUNCTION lib.issn_isN(text)  RETURNS smallint AS $func$
 $func$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE FUNCTION lib.issn_N2C(int)  RETURNS int AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_N2C(int)  RETURNS int AS $func$
   -- 
   -- Returns the integer ISSN-L of any integer ISSN. 
   -- Returns NULL if the input not exists. 
@@ -169,7 +169,7 @@ CREATE FUNCTION lib.issn_N2C(int)  RETURNS int AS $func$
   SELECT issn_l FROM lib.issn_l WHERE issn=$1;
 $func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE FUNCTION lib.issn_N2C(text)  RETURNS int AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_N2C(text)  RETURNS int AS $func$
   -- 
   -- Same as lib.issn_N2C(int), but casting text inputs. 
   --
@@ -177,7 +177,7 @@ CREATE FUNCTION lib.issn_N2C(text)  RETURNS int AS $func$
 $func$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE FUNCTION lib.issn_N2Ns(int)  RETURNS int[] AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_N2Ns(int)  RETURNS int[] AS $func$
   -- 
   -- Returns all ISSNs linked to a ISSN. 
   -- Returns NULL if the input not exists. 
@@ -189,7 +189,7 @@ CREATE FUNCTION lib.issn_N2Ns(int)  RETURNS int[] AS $func$
   WHERE issn_l=lib.issn_N2C($1);
 $func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE FUNCTION lib.issn_N2Ns(text)  RETURNS int[] AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_N2Ns(text)  RETURNS int[] AS $func$
   -- 
   -- Same as lib.issn_N2Ns(int), but casting text input. 
   --
@@ -197,7 +197,7 @@ CREATE FUNCTION lib.issn_N2Ns(text)  RETURNS int[] AS $func$
 $func$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE FUNCTION lib.issn_N2Ns_formated(int)  RETURNS text[] AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_N2Ns_formated(int)  RETURNS text[] AS $func$
   -- 
   -- Same as lib.issn_N2Ns(int), but returning text formated ISSNs
   --
@@ -206,7 +206,7 @@ CREATE FUNCTION lib.issn_N2Ns_formated(int)  RETURNS text[] AS $func$
   WHERE issn_l=lib.issn_N2C($1);
 $func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE FUNCTION lib.issn_N2Ns_formated(text)  RETURNS text[] AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_N2Ns_formated(text)  RETURNS text[] AS $func$
   -- 
   -- Same as lib.issn_N2Ns_formated(int), but casting text input. 
   --
@@ -236,14 +236,14 @@ BEGIN
    END, ''); -- case
 END;
 $func$ LANGUAGE plpgsql IMMUTABLE;
-CREATE FUNCTION lib.issn_tservice(text,text)  RETURNS text AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_tservice(text,text)  RETURNS text AS $func$
   -- 
   -- Same as lib.issn_tservice(int,text), but casting text input. 
   --
   SELECT lib.issn_tservice( lib.issn_cast($1), $2 );
 $func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE FUNCTION lib.issn_xservice(
+CREATE OR REPLACE FUNCTION lib.issn_xservice(
   -- 
   -- Performs a "lib.issn_*()" function and returns into a XML.
   --
@@ -278,7 +278,7 @@ BEGIN
    END; -- case
 END;
 $func$ LANGUAGE plpgsql IMMUTABLE;
-CREATE FUNCTION lib.issn_xservice(text,text)  RETURNS xml AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_xservice(text,text)  RETURNS xml AS $func$
   -- 
   -- Same as lib.issn_xservice(int,text), but casting text input. 
   --
@@ -291,7 +291,7 @@ $func$ LANGUAGE SQL IMMUTABLE;
 
 ----------------------------------------
 --- testing context for integer outoput
-CREATE FUNCTION issn_tservice_int(char,text,text)  RETURNS INT[] AS $func$
+CREATE OR REPLACE FUNCTION issn_tservice_int(char,text,text)  RETURNS INT[] AS $func$
   -- 
   -- Performs a "lib.issn_*()" function and returns into a plain text.
   --
@@ -310,7 +310,7 @@ BEGIN
    END, -2); -- case
 END;
 $func$ LANGUAGE plpgsql IMMUTABLE;
-CREATE FUNCTION lib.issn_tservice_int(text,text)  RETURNS text AS $func$
+CREATE OR REPLACE FUNCTION lib.issn_tservice_int(text,text)  RETURNS text AS $func$
   -- 
   -- Same as lib.issn_xws(int,text), but casting text input. 
   --
