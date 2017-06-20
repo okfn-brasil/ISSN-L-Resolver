@@ -45,13 +45,23 @@ but only a half (9Mb) is about "ISSN to ISSN-L" table, and, at SQL database, wit
 With `issnltables2sql.php` you can convert the file into SQL and then run `psql` to populate.
 
 ### Instructions for populating ###
+Sumary of the shell-script that will following, 
 
- 1. unzip issnltables.zip in a "issnltables"  folder
- 2. test at terminal with `$ php issnltables2sql.php`
- 3. run all with your database: `$ php issnltables2sql.php all | psql -h localhost -U postgres base`
- 4. if you not using `lib` schema, create it at your database, `CREATE SCHEMA lib`
- 5. install the lib: `$ psql -h localhost -U postgres base < lib.sql`
- 6. if not use for another thing, `rm -r issnltables` and `rm issnltables.zip`
+ 1. create dabase `issnl`
+ 2. unzip issnltables.zip in a "issnltables"  folder
+ 3. test at terminal with `$ php issnltables2sql.php`
+ 4. run all scripts
+ 5. if not use for another thing, `rm -r issnltables` and `rm issnltables.zip`
+
+So, **start to install**. With `PGPASSWORD=postgres psql -h localhost -U postgres` run `CREATE database issnl;` to create a database. Go to the working folder and run his shell script:
+
+```
+cd ISSN-L-Resolver
+unzip issnltables.zip -d issnltables
+PGPASSWORD=postgres psql -h localhost -U postgres  issnl < step1-schema.sql
+PGPASSWORD=postgres psql -h localhost -U postgres  issnl < step2-lib.sql
+php step3-issnltables2sql.php all | PGPASSWORD=postgres psql -h localhost -U postgres  issnl
+```
 
 ## Resolving ##
 The "ISSN resolver" is a simple information retrivial service that returns integer or canonical ISSNs as response. 
