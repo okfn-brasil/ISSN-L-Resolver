@@ -298,11 +298,11 @@ BEGIN
   cmd := lower(cmd);
   RETURN
   CASE WHEN cmd='isc' THEN
-    to_jsonb(  COALESCE(issn.isc($1)::boolean,null) )
+    to_jsonb(  COALESCE(issn.isc($1),null) )
    WHEN cmd='isn' THEN
-    to_jsonb(  COALESCE(issn.isn($1)::boolean,null) )
+    to_jsonb(  COALESCE(issn.isn($1),null) )
    WHEN cmd='n2c' THEN
-    to_jsonb(  COALESCE(issn.cast(issn.n2c($1)::boolean,null))  )
+    to_jsonb(  COALESCE(issn.cast(issn.n2c($1)),null) )
    WHEN cmd='n2ns' THEN (
      SELECT to_jsonb( xmlagg(xmlelement(name issn,i)) )
      FROM  (SELECT unnest( issn.n2ns_formated($1) ) as i ) as t

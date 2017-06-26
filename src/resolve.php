@@ -1,6 +1,6 @@
 <?php
 /**
- * Run service as terminal command.
+ * Run service as terminal command. Requires PHP v7.1.
  * Commands  N2C,N2Ns,isN,isC,info, list
  * php resolve.php -j --n2n 1234567
  * http://localhost/gits/ISSN-L-resolver/webservice/
@@ -13,7 +13,7 @@ $PG_PW   = 'postgres';
 
 
 $optind = null;
-$opts = getopt('hjx', ['N2N','N2Ns','N2C','N2Cs','N2U','N2Us','isN','isC','info'], $optind);
+$opts = getopt('hjx', ['N2N','N2Ns','N2C','N2Cs','N2U','N2Us','isN','isC','info'], $optind); // exige PHP7.1
 $extras = array_slice($argv, $optind);
 $outFormat = isset($opts['x'])? 'x': 'j';  // x|j|t
 unset($opts['x']);unset($opts['j']);
