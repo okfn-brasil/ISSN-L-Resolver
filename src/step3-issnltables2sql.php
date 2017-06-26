@@ -1,19 +1,23 @@
 <?php
+// CONFIG
+$folder='issnltables';
+
+
 /**
  * ISSN-to-ISSNL file conversor, PostgresSQL tested implementation.
- * 
- * v1.0-2014 of https://github.com/ppKrauss/ISSN-L-resolver 
+ *
+ * v1.0-2014 of https://github.com/ppKrauss/ISSN-L-resolver
  * Use at terminal:
  *  % unzip issnltables.zip
  *  % php issnltables2sql.php | more
  *  % php issnltables2sql.php ALL | psql -h localhost -U postgres base
- * Cost at postgreSQL: ~ 101700 blocks ok 1k (df command). 
+ * Cost at postgreSQL: ~ 101700 blocks ok 1k (df command).
  */
 function echo_fileFiltered(
 	$folder='issnltables',  // name of the folder produced by    unzip issnltables.zip
 	$MAX = 200,             // 0 (for ALL) or number of items for sample.
-	$table='lib.issn_l',    // name of the table that will be the recipient of "echoated data"
-	$frag=90000             // number of records per fragment, important to avoid some "psql overflow" 
+	$table='issn.intcode',    // name of the table that will be the recipient of "echoated data"
+	$frag=90000             // number of records per fragment, important to avoid some "psql overflow"
 ) {
 	$file='';
 	echo "\n---debug $folder\n";
@@ -33,21 +37,21 @@ function echo_fileFiltered(
 	        }
 	        if ($n>10 && ($n%$frag)==0) {
 	        	echo ";\n\nINSERT INTO $table (issn, issn_l) VALUES ";
-	        	$sep='';	        	
+	        	$sep='';
 	        }
 	   } // for
 	   if ((!$MAX || $n!=$MAX)  && !feof($handle)) {
 	        echo "\n##Error: unexpected fgets() fail\n";
-	   } else 
+	   } else
 	    	echo ";";
 	   fclose($handle);
-	} // if	
+	} // if
 } // func
 
 if (isset($argv[0])) {
 	// alert: using at terminal (shell)
 	$n = isset($argv[1])? 0: 20;
-	echo_fileFiltered('issnltables', $n, 'lib.issn_l',90000);
+	echo_fileFiltered($folder, $n);
 }
 
 

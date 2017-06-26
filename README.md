@@ -6,12 +6,11 @@ ISSN-L-resolver
 The **ISSN-L resolver** converts any ISSN to its corresponding [ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN) ("linking ISSN") using a lightweight SQL structure:
 
   ````sql
-   CREATE TABLE lib.issn_l (
+   CREATE TABLE issn.intcode (
       issn integer NOT NULL PRIMARY KEY,
       issn_l integer NOT NULL
     );
-   CREATE INDEX issn_idx1 ON lib.issn_l(issn_l);     
-   -- about need for indexes, see lib.issn_N2Ns() function.
+   CREATE INDEX issn_idx1 ON issn.intcode(issn_l);     
   ````
 
 The core of the *ISSN-L resolver* solution is a SQL script wrote for PostgreSQL, in PL/pgSQL language. It also offers functions to format and validate ISSN strings from the front-end, webservices or back-end.
@@ -36,8 +35,8 @@ The webservice was implemented in three parts:
 In order to have access to the txt data of correspondence ISSN/ISSN-L,  fill the form on ISSN-ORG website:
 
  http://www.issn.org/services/online-services/access-to-issn-l-table/
-   
-then, you download a 18Mb zip file, 
+
+then, you download a 18Mb zip file,
 
      issnltables.zip
 
@@ -45,7 +44,7 @@ but only a half (9Mb) is about "ISSN to ISSN-L" table, and, at SQL database, wit
 With `issnltables2sql.php` you can convert the file into SQL and then run `psql` to populate. See a test dump  [issnltables.zip](https://github.com/okfn-brasil/videos/raw/master/evento/issnltables.zip)
 
 ### Instructions for populating ###
-Sumary of the shell-script that will following, 
+Sumary of the shell-script that will following,
 
  1. create dabase `issnl`
  2. unzip issnltables.zip in a "issnltables"  folder
@@ -64,11 +63,11 @@ php step3-issnltables2sql.php all | PGPASSWORD=postgres psql -h localhost -U pos
 ```
 
 ## Resolving ##
-The "ISSN resolver" is a simple information retrivial service that returns integer or canonical ISSNs as response. 
+The "ISSN resolver" is a simple information retrivial service that returns integer or canonical ISSNs as response.
 The resolution operation names was inspired in the [RFC2169 jargon](http://tools.ietf.org/html/rfc2169), for generic URNs,
 
 * N2C  = returns the canonical (preferred) URN of an input-URN.
-* N2Ns = returns a set of URNs related to the input-URN. 
+* N2Ns = returns a set of URNs related to the input-URN.
 * N2L  = [not implemented] returns or redirects to the main URL of an input-URN.
 * N2Ls = [not implemented] returns all the URLs related to the input-URN.
 * list = retrieves all component URNs (or its metadata), when component entities exists.
@@ -87,19 +86,19 @@ The letters in these *standard operation names* are used in the following sense:
 Typical uses for resolver functions:
 
 ```sql
-  SELECT lib.issn_isC(115);         SELECT lib.issn_isC('8755-9994');
+  SELECT issn.isC(115);         SELECT issn.isC('8755-9994');
   -- returns          NULL          1
-  SELECT lib.issn_isN(115);         SELECT lib.issn_isN('8755-9995');
+  SELECT issn.isN(115);         SELECT issn.isN('8755-9995');
   -- returns             1          2
-  SELECT lib.issn_n2c(8755999);     SELECT lib.issn_n2c('8755-9994');
+  SELECT issn.n2c(8755999);     SELECT issn.n2c('8755-9994');
   -- returns           8755999      8755999
-  SELECT lib.issn_n2c(115);         SELECT lib.issn_cast(lib.issn_n2c(8755999));
+  SELECT issn.n2c(115);         SELECT issn.cast(issn.n2c(8755999));
   -- returns            67          8755-9994
-  SELECT lib.issn_n2c(8755999);     SELECT lib.issn_cast(lib.issn_n2c(115));
+  SELECT issn.n2c(8755999);     SELECT issn.cast(issn.n2c(115));
   -- returns           8755999      0000-0671
-  SELECT lib.issn_n2ns(8755999);    SELECT lib.issn_xservice(8755999,'n2ns');
+  SELECT issn.n2ns(8755999);    SELECT issn.xservice(8755999,'n2ns');
   -- returns          {8755999}     <ret status="sucess"><issn>8755-9994</issn></ret>
-  SELECT lib.issn_n2ns_formated(115);
+  SELECT issn.n2ns_formated(115);
   -- returns {0000-0671,0000-1155,0065-759X,0065-910X,0068-0540,0074-6827,1067-8166}
 ```
 ### With the DEMO ###
@@ -113,7 +112,7 @@ At a webservice's endpoint, ex. `http://ws.myDomain/issn-resolver`, use `xws.` f
 
 ```
     http://<subdomain> "." <domain> "/" <query>
-      <subdomain> =  [<catalog-name> "."] <ws-format> 
+      <subdomain> =  [<catalog-name> "."] <ws-format>
       <ws-format> = "tws" | "hws" | "jws" | "xws" | "ws"
       <query>     = <urn> | <operation> "/" <urn>
       <urn>       = "urn:" <urn-schema> ":" <urn-value> | <urn-value>
@@ -149,12 +148,12 @@ Example: `http://issn.jws.example.org/1234-9223` returns the default operation f
 
 **Standard operations**: a [WSDL file](https://en.wikipedia.org/wiki/WSDL#Example_WSDL_file) describes services as collections of network endpoints, so, in the same intention, this document describes a set of interoperable endpoints focusing on the handling of ISSN-URNs. As suggested by the [old IETF's RFC-2169](http://tools.ietf.org/html/rfc2169), some typical *"ISSN resolution"* services can be offered, in response to the `<query>`,
 
- * *N2C*: the *ISSN-L* of the input. See SQL `lib.issnl_n2c()`.
- * *N2Ns*: all the ISSNs grouped by a ISSN-L associated with the input. See SQL `lib.issnl_n2ns()`.
+ * *N2C*: the *ISSN-L* of the input. See SQL `issn.n2c()`.
+ * *N2Ns*: all the ISSNs grouped by a ISSN-L associated with the input. See SQL `issn.n2ns()`.
  * *N2U*: the "journal's official URL", where "official" is in the context of the webservice server entity. No implementation here, only an illustrative operation.
  * *N2Us*: all the "journal's URLs", when exist more than one. No implementation here, only an illustrative operation.
  * *isN*: check if a query string is a valid ISSN (registered in the database).
- * *isC*: like *isN* but also checking format. See SQL `lib.issn_check()`.
+ * *isC*: like *isN* but also checking format. See SQL `issn.check()`.
  * *info*: the *card catalog* of the object pointed by the URN. Illustrative.
 
 These basic ISSN resolution operations, solves most of the commom interoperability problems. Of course, any other simple (1 operand) operation can be add as new `op-name` or a (2 or more operands) as a complete URL.
@@ -162,15 +161,15 @@ These basic ISSN resolution operations, solves most of the commom interoperabili
 #### Endpoint URL examples
 URL example and description:
 
- * `http://jou.tws.myExample.org/n2n/123456` - Context="journal", io-format="text", operation="n2n" (resolve name replaying name), URN=123456 (using default URN-schema=issn and reference-URN). 
- * `http://ws.myExample.org/text.jou.n2n/123456` - idem above, but with context and format at path. 
+ * `http://jou.tws.myExample.org/n2n/123456` - Context="journal", io-format="text", operation="n2n" (resolve name replaying name), URN=123456 (using default URN-schema=issn and reference-URN).
+ * `http://ws.myExample.org/text.jou.n2n/123456` - idem above, but with context and format at path.
  * `http://ws.myExample.org/text.auto/0123-456X` - similar to above, but with default operation (`info`) and default (or auto-detect) URN-schema.
  * ...
  * `http://jou.tws.myExample.org/n2n/urn:issn:123456` - ...
  * ...
  * `http://jou.tws.myExample.org/?cmd=n2n&q=urn:issn:123456` - ...
  * ...
- 
+
 ## Implementations ##
 Some notes about each specific implementation.
 
@@ -196,5 +195,4 @@ RewriteRule ^(n2ns?|n2us?|isn|isc)/(?:urn:(issn):)?([0-9][\d\-]*X?)$     index.p
 ### PHP webservices ###
 ... index.php ...
 
-For tuning and performance, see "microservices strategies" as http://nginx.com/blog/realtime-applications-nginx/ 
-
+For tuning and performance, see "microservices strategies" as http://nginx.com/blog/realtime-applications-nginx/
