@@ -263,24 +263,14 @@ CREATE OR REPLACE FUNCTION issn.xservice(
 )  RETURNS xml  AS $func$
 BEGIN
   cmd := lower(cmd);
-  RETURN
-  CASE WHEN cmd='isc' THEN
-     xmlelement(  name ret,
-                  xmlattributes('sucess' as status),
-                  COALESCE(issn.isc($1)::text,'')
-     )
+  RETURN CASE
+   WHEN cmd='isc' THEN
+    xmlelement(  name ret,  COALESCE(issn.isc($1)::text,'') )
    WHEN cmd='isn' THEN
-     xmlelement(  name ret,
-                  xmlattributes('sucess' as status),
-                  COALESCE(issn.isn($1)::text,'')
-     )
+    xmlelement(  name ret,  COALESCE(issn.isn($1)::text,'') )
    WHEN cmd='n2c' THEN
-     xmlelement(  name ret,
-                  xmlattributes('sucess' as status),
-                  COALESCE(issn.cast(issn.n2c($1)),'')
-     )
-   WHEN cmd='n2ns' THEN
-     (
+    xmlelement(  name ret,   COALESCE(issn.cast(issn.n2c($1)),'') )
+   WHEN cmd='n2ns' THEN (
       SELECT xmlelement(  name ret,  xmlattributes('sucess' as status),  xmlagg(xmlelement(name issn,i))  )
       FROM  (SELECT unnest( issn.n2ns_formated($1) ) as i ) as t
      )
@@ -303,37 +293,28 @@ CREATE OR REPLACE FUNCTION issn.jservice(
   --
   int,        -- $1 the command argument
   cmd   text  -- $2 the command (isC, isN, N2C, N2Ns, N2Ns_formated)
-)  RETURNS JSON  AS $func$
+)  RETURNS JSONb  AS $func$
 BEGIN
   cmd := lower(cmd);
   RETURN
   CASE WHEN cmd='isc' THEN
-     to_jsonb(  name ret,
-                  COALESCE(issn.isc($1)::boolean,null)
-     )
+    to_jsonb(  COALESCE(issn.isc($1)::boolean,null) )
    WHEN cmd='isn' THEN
-     xmlelement(  name ret,
-                  xmlattributes('sucess' as status),
-                  COALESCE(issn.isn($1)::text,'')
-     )
+    to_jsonb(  COALESCE(issn.isn($1)::boolean,null) )
    WHEN cmd='n2c' THEN
-     xmlelement(  name ret,
-                  xmlattributes('sucess' as status),
-                  COALESCE(issn.cast(issn.n2c($1)),'')
-     )
-   WHEN cmd='n2ns' THEN
-     (
-      SELECT xmlelement(  name ret,  xmlattributes('sucess' as status),  xmlagg(xmlelement(name issn,i))  )
-      FROM  (SELECT unnest( issn.n2ns_formated($1) ) as i ) as t
-     )
+    to_jsonb(  COALESCE(issn.cast(issn.n2c($1)::boolean,null))  )
+   WHEN cmd='n2ns' THEN (
+     SELECT to_jsonb( xmlagg(xmlelement(name issn,i)) )
+     FROM  (SELECT unnest( issn.n2ns_formated($1) ) as i ) as t
+    )
    ELSE
-        xmlelement(  name ret,  xmlattributes('error' as status, 1 as cod), 'unknowing command' )
+      jsonb_build_object('status','error',  'cod',1,  'error_message','unknowing command')
    END; -- case
 END;
 $func$ LANGUAGE plpgsql IMMUTABLE;
-CREATE OR REPLACE FUNCTION issn.jservice(text,text)  RETURNS xml AS $fwrap$
+CREATE OR REPLACE FUNCTION issn.jservice(text,text)  RETURNS jsonb AS $fwrap$
   --
   -- Same as issn.jservice(int,text), but casting text input.
   --
-  SELECT issn.xservice( issn.cast($1), $2 );
+  SELECT issn.jservice( issn.cast($1), $2 );
 $fwrap$ LANGUAGE SQL IMMUTABLE;

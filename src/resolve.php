@@ -44,7 +44,7 @@ $sval = $extras[0];
 $opname = strtolower(trim($cmd[0]));
 $outType   = 'int'; // int or std (ex. lib.issn_n2ns_formated(115))
 echo "\nRESULT: ".issnLresolver($opname,$sval,$outType,$outFormat);
-
+echo "\n";
 
 //////////////////// LIB ////////////////////
 function issnLresolver($opname,$sval,$vtype='str',$outFormat,$debug=false) {
