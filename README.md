@@ -1,6 +1,8 @@
 ISSN-L-resolver
 ===============
 
+&nbsp; (see [OpenAPI description *ISSN-L-resolver/1.0.1*](https://app.swaggerhub.com/apis/ppKrauss/ISSN-L-resolver/1.0.1))
+
 **ISSN** is a standard public [opaque identifier](https://en.wikipedia.org/wiki/Unique_identifier) for [journals](https://en.wikipedia.org/wiki/Periodical_publication), assigned by the [ISSN-ORG authority](http://www.issn.org). Its main function is to be a short alias for the [systematic name](https://en.wikipedia.org/wiki/Systematic_name) of the journal, uniquely identifying the publication content (*ISSN-L*) or a specific [media type](https://en.wikipedia.org/wiki/Media_(communication)) of the publication. In the latter case, for example, the same journal can have an *eletronic-ISSN* and a *print-ISSN*, which identifies its electronic and printed publications separately.
 
 The **ISSN-L resolver** converts any ISSN to its corresponding [ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN) ("linking ISSN") using a lightweight SQL structure:
