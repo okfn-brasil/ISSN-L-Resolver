@@ -57,16 +57,13 @@ function issnLresolver($opname,$sval,$vtype='str',$outFormat,$debug=false) {
 		case 'n2cs':
 		case 'isn':
 		case 'isc':
+    case 'n2n':
+    case 'n2ns':
 			$val = (!$vtype || $vtype=='str')? "'$sval'": $sval;
 			$sqlFCall = "issn.{$outFormat}service($val,'$opname')";  // ex. issn_xservice(8755999,'n2ns');
 			break;
 		case 'info':
 			$sqlFCall = "'... info formated text ...'";
-			break;
-		case 'n2n':
-		case 'n2u':
-		case 'n2us':
-			$sqlFCall = "'... operation $opname not make sense in this context ...'";
 			break;
 		default:
 			$sqlFCall = "'op-name not knowed'";
