@@ -5,7 +5,7 @@
  */
 
 //CONF
-$PG_CONSTR = 'pgsql:host=postgres;port=5432;dbname=postgres';
+$PG_CONSTR = 'pgsql:host=localhost;port=5432;dbname=issnl';
 $PG_USER = 'postgres';
 $PG_PW   = 'postgres';
 // or include('conf.php');
@@ -26,7 +26,7 @@ $outType   = 'int'; // int or std (ex. lib.issn_n2ns_formated(115))
 <?php
 
 if ($opname) {
-	$vtype = preg_match('/^\d+$/',$sval)? 'int': 'str'; 
+	$vtype = preg_match('/^\d+$/',$sval)? 'int': 'str';
 	list($r,$sql) = issnLresolver($opname,$sval,$vtype,$outFormat,true);
 	print "<h1>RESULT</h1><code>$sql</code><br/>".'<textarea rows="6" cols="120">';
 	print "$r</textarea><hr/>";
@@ -51,7 +51,7 @@ if ($opname) {
 </form>
 <hr/>
 
-This is a simple information retrivial service that returns integer or canonical ISSNs as response. 
+This is a simple information retrivial service that returns integer or canonical ISSNs as response.
 The resolution operation names was inspired in the RFC2169 jargon, for generic URNs,
 <ul>
 	<li>N2L = returns the main URL of an input-URN.</li>

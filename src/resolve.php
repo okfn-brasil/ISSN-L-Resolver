@@ -7,10 +7,10 @@
  */
 
 //CONF
-$PG_CONSTR = 'pgsql:host=postgres;port=5432;dbname=postgres';
+$PG_CONSTR = 'pgsql:host=localhost;port=5432;dbname=issnl';
 $PG_USER = 'postgres';
 $PG_PW   = 'postgres';
-// or include('conf.php');
+
 
 $optind = null;
 $opts = getopt('hjx', ['N2N','N2Ns','N2C','N2Cs','N2U','N2Us','isN','isC','info'], $optind);
@@ -47,8 +47,7 @@ echo "\nRESULT: ".issnLresolver($opname,$sval,$outType,$outFormat);
 
 
 //////////////////// LIB ////////////////////
-
-function issnLresolver($opname,$sval,$vtype='str',$outFormat,$debug=true) {
+function issnLresolver($opname,$sval,$vtype='str',$outFormat,$debug=false) {
 	global $PG_CONSTR, $PG_USER, $PG_PW;
 	$r = $sql = '';
 	if ($opname) {
@@ -59,7 +58,7 @@ function issnLresolver($opname,$sval,$vtype='str',$outFormat,$debug=true) {
 		case 'isn':
 		case 'isc':
 			$val = (!$vtype || $vtype=='str')? "'$sval'": $sval;
-			$sqlFCall = "lib.issn_{$outFormat}service($val,'$opname')";  // ex. issn_xservice(8755999,'n2ns');
+			$sqlFCall = "issn.{$outFormat}service($val,'$opname')";  // ex. issn_xservice(8755999,'n2ns');
 			break;
 		case 'info':
 			$sqlFCall = "'... info formated text ...'";
@@ -74,6 +73,7 @@ function issnLresolver($opname,$sval,$vtype='str',$outFormat,$debug=true) {
 		} // switch
 		$dbh = new PDO($PG_CONSTR, $PG_USER, $PG_PW);
 		$sql = "SELECT $sqlFCall LIMIT 1";
+    if ($debug) echo "\n$sql\n";
 		$r = $dbh->query($sql)->fetchColumn();
 	}
 	return $debug? array($r, $sql): $r;
