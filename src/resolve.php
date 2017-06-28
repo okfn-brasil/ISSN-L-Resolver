@@ -1,6 +1,6 @@
 <?php
 /**
- * Run service as terminal command. Requires PHP v7.1.
+ * Run as web-service or terminal command. Requires PHP v7.1.
  * Commands  N2C,N2Ns,isN,isC,info, list
  * php resolve.php -j --n2n 1234567
  * http://localhost/gits/ISSN-L-resolver/webservice/
