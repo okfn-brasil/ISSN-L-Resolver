@@ -1,0 +1,19 @@
+  php resolve.php [output] command issn_value
+    output:  -x=xml  -j=json  -t=txt
+    issn_value: 7-digit integer or string
+    command:
+    --isC  = returns 1 for ISSN-L, NULL when exist, 0 otherelse.
+    --isN  = returns the main URL of an input-URN.
+    --N2L  = returns the main URL of an input-URN.
+    --N2Ns = returns a set of URNs related to the input-URN.
+    --N2Ls = returns all the URLs related to the input-URN.
+    --N2C  = returns the canonical (preferred) URN of an input-URN.
+    --list = retrieves all component URNs (or its metadata), when component entities exists.
+    --info = retrieves catalographic information or metadata of the (entity of the) URN.
+
+     'C': the canonic URN string (the 'official string' and unique identifier); non-RFC2169 jargon;
+     'N': URN, canonical or 'reference URN' (a simplified non-ambiguous version of the canonical one);
+     'L': URL (main URL is a http and secondary can by also ftp and mailto URLs, see RFC2368)
+     'is': 'isX' stands 'is a kind of X' or 'is really a X';
+     '2': stands 'to', for convertion services.
+

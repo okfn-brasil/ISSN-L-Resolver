@@ -4,11 +4,8 @@
  * http://localhost/gits/ISSN-L-resolver/webservice/
  */
 
-//CONF
-$PG_CONSTR = 'pgsql:host=localhost;port=5432;dbname=issnl';
-$PG_USER = 'postgres';
-$PG_PW   = 'postgres';
-// or include('conf.php');
+include('conf.php');
+if ($is_client) die("\nthis script is for-Web-only\n");
 
 $opname = isset($_GET['opname'])? strtolower(trim($_GET['opname'])): ''; // "N2N" | "N2Ns" | "N2C" | "N2Cs" | "N2U" | "N2Us" | "isN"| "isC" | "info"
 $sval = isset($_GET['sval'])? trim($_GET['sval']): ''; 				// string input
