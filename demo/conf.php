@@ -1,5 +1,8 @@
 <?php
-//CONF
+/**
+ * Basic and default configurations.
+ */
+
 $PG_CONSTR = 'pgsql:host=localhost;port=5432;dbname=issnl';
 $PG_USER = 'postgres';
 $PG_PW   = 'postgres';
@@ -12,5 +15,4 @@ $status = 200;
   // 416 - issn format is invalid.
 
 $cmdValid = ['N2N','N2Ns','N2C','N2Cs','N2U','N2Us','isN','isC','info', 'infodb'];
-
 ?>
