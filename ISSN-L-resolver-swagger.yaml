@@ -241,4 +241,5 @@ paths:
 host: virtserver.swaggerhub.com
 basePath: /ppKrauss/ISSN-L-resolver/1.0.0
 schemes:
+ - http
  - https

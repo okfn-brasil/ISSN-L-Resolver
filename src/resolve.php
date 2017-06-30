@@ -5,16 +5,18 @@
  * By terminal:
  *   php resolve.php -j --n2n 1234567
  * By Web:
- * http://teste.oficial.news/resolve.php?opname=n2c&sval=1
+ *  http://teste.oficial.news/resolve.php?opname=n2c&issn7=1
+ *  http://teste.oficial.news/resolve.php?opname=N2Ns&issn=0001-3439&format=x
  */
 
 include('conf.php');
+$format_dft = 'j';
 
 if ($is_cli) {
   $optind = null;
   $opts = getopt('hjxd', $cmdValid, $optind); // exige PHP7.1  -d=debug
   $extras = array_slice($argv, $optind);
-  $outFormat = isset($opts['x'])? 'x': 'j';  // x|j|t
+  $outFormat = isset($opts['x'])? 'x': (isset($opts['t'])? 't': $format_dft);  // x|j|t
   unset($opts['x']);unset($opts['j']);
   $cmd = array_keys($opts);
   if (isset($opts['h']) || !count($extras) || count($cmd)!=1)
@@ -36,12 +38,11 @@ if (!$is_cli && !$debug) {
 	header("Content-Type: $outFormatMime[$outFormat]");
 }
 
-$output = issnLresolver($opname,$sval,$outType,$outFormat);
+$output = issnLresolver($opname,$sval,$outType,$outFormat,$debug);
 if ($debug)
-  echo "issnLresolver($opname,$sval,$outType,$outFormat) = [status $status, out $output]";
+  echo "issnLresolver($opname,$sval,$outType,$outFormat) = [\n\tstatus $status, \n\tout $output[0], \n\tsql $output[1] ]";
 else
   echo json_encode($output);
-
 
 //////////////////// LIB ////////////////////
 function issnLresolver($opname,$sval,$vtype='str',$outFormat,$debug=false) {
@@ -67,9 +68,8 @@ function issnLresolver($opname,$sval,$vtype='str',$outFormat,$debug=false) {
 		} // switch
 		$dbh = new PDO($PG_CONSTR, $PG_USER, $PG_PW);
 		$sql = "SELECT $sqlFCall LIMIT 1";
-    if ($debug) echo "\n$sql\n";
 		$r = $dbh->query($sql)->fetchColumn();
-	}
+  } //switch
 	return $debug? array($r, $sql): $r;
 } // func
 
