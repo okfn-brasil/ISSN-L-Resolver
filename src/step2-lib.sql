@@ -131,7 +131,7 @@ CREATE OR REPLACE FUNCTION issn.isC(int)  RETURNS smallint AS $func$
   -- Returns 1 when input is an ISSN-L, NULL when is bigger than max, 0 otherwise.
   SELECT COALESCE(
     (SELECT  1::smallint as r  FROM issn.intcode WHERE issn_l=$1 LIMIT 1),
-    (SELECT  CASE WHEN $1<=issn_max AND $1>0 THEN 0 ELSE NULL::smallint END  FROM issn.info)
+    (SELECT  CASE WHEN $1<=issn_max AND $1>0 THEN 0 ELSE NULL END  FROM issn.info)::smallint
   );
 $func$ LANGUAGE SQL IMMUTABLE;
 
@@ -154,7 +154,7 @@ CREATE OR REPLACE FUNCTION issn.isN(int)  RETURNS smallint AS $func$
   -- NOTE: "isN service" in the RFC2169 jargon.
   SELECT COALESCE(
     (SELECT 1::smallint as r FROM issn.intcode WHERE issn=$1),
-    (SELECT  CASE WHEN $1<=issn_max AND $1>0 THEN 0 ELSE NULL::smallint END  FROM issn.info)
+    (SELECT  CASE WHEN $1<=issn_max AND $1>0 THEN 0::smallint ELSE NULL::smallint END  FROM issn.info)
   );
 $func$ LANGUAGE SQL IMMUTABLE;
 
