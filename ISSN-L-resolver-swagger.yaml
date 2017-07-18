@@ -67,7 +67,7 @@ paths:
       description: |
         Check that input is a Linking ISSN (an ISSN-L). The error 404 needs an updated database, to be an real "ISSN not exists". 
       produces:
-      - application/json
+      - application/xml
       parameters:
       - $ref: '#/parameters/issn'
       responses:
@@ -89,7 +89,7 @@ paths:
       description: |
         Check that the Name (ISSN) exists, returning true. When input is out of range returns null, else the boolean false indicates "not found".
       produces:
-      - application/json
+      - application/xml
       parameters:
       - $ref: '#/parameters/issn'
       responses:
@@ -112,7 +112,7 @@ paths:
       description: |
         Check that input is a Linking ISSN (an ISSN-L). The error 404 needs an updated database, to be an real "ISSN not exists". 
       produces:
-      - application/json
+      - application/xml
       parameters:
       - $ref: '#/parameters/issn7'
       responses:
@@ -134,7 +134,7 @@ paths:
       description: |
         Check that the Name (ISSN) exists, returning true. When input is out of range returns null, else the boolean false indicates "not found".
       produces:
-      - application/json
+      - application/xml
       parameters:
       - $ref: '#/parameters/issn7'
       responses:
@@ -157,7 +157,7 @@ paths:
       description: |
         Converts commom ISSN input into a corresponding Linking ISSN (an ISSN-L).
       produces:
-      - application/json
+      - application/xml
       parameters:
       - $ref: '#/parameters/issn'
       responses:
@@ -179,7 +179,7 @@ paths:
       description: |
         Converts commom ISSN input into a corresponding "grouped by ISSN-L" set of ISSNs.
       produces:
-      - application/json
+      - application/xml
       parameters:
       - $ref: '#/parameters/issn'
       responses:
@@ -201,7 +201,7 @@ paths:
       description: |
         Converts Converts integer input (representing an ISSN code) into a corresponding Linking ISSN (an ISSN-L).
       produces:
-      - application/json
+      - application/xml
       parameters:
       - $ref: '#/parameters/issn7'
       responses:
@@ -223,7 +223,7 @@ paths:
       description: |
         Converts Converts integer input (representing an ISSN code) into a corresponding "group by ISSN-L" set of ISSNs.
       produces:
-      - application/json
+      - application/xml
       parameters:
       - $ref: '#/parameters/issn7'
       responses:
@@ -236,10 +236,43 @@ paths:
         416:
           description: issn format is invalid.
 
+  /info:
+    get:
+      tags:
+      - full
+      summary: show metadata about current ISSN database.
+      operationId: infoDB
+      description: |
+        Information about ISSN database. Not use REST status codes.
+      produces:
+      - application/xml
+      responses:
+        200:
+          description: retrieve information
+          schema:
+            type: integer
+
+  /{issn}/info:
+    get:
+      tags:
+      - full
+      summary: When input exist, returns all basic metadata about it.
+      operationId: info
+      description: |
+        Supply all basic metadata about input and, when not exist, explain in a error message. Not use REST status codes.
+      produces:
+      - application/xml
+      parameters:
+      - $ref: '#/parameters/issn'
+      responses:
+        200:
+          description: retrieve information
+          schema:
+            type: integer
 
 # Added by API Auto Mocking Plugin
-host: virtserver.swaggerhub.com
-basePath: /ppKrauss/ISSN-L-resolver/1.0.0
+host: issn.oficial.news
 schemes:
  - http
  - https
+ 
