@@ -37,7 +37,7 @@ if ($is_cli) {
 else {
  	$opname = isset($_GET['opname'])? strtolower(trim($_GET['opname'])): '';
  	$sval = isset($_GET['sval'])? trim($_GET['sval']): ''; 				// string input
- 	$outFormat = isset($_GET['format'])? trim($_GET['format']): 'x'; // h|x|j|t
+ 	$outFormat = isset($_GET['format'])? trim($_GET['format']): $format_dft; // h|x|j|t
  	$outType   = 'int';
         $debug = isset($_GET['debug'])? 1: 0;
 }
@@ -63,6 +63,7 @@ else
 //////////////////// LIB ////////////////////
 
 function apiGateway_parsePath($q) {
+  global $format_dft;
    if (preg_match('#^/?(\d+)/(n2ns|n2c|is[nc])(\.(?:js|json|xml|txt))?$#is', $q, $m))
       $inType   = 'int';
    elseif (preg_match('#^/?([0-9][\d\-]*X?)/(n2ns|n2c|is[nc])(\.(?:js|json|xml|txt))?$#is', $q, $m))
@@ -71,7 +72,7 @@ function apiGateway_parsePath($q) {
      die("\nERROR 23: '$q'\n");
    $sval = $m[1];
    $opname = strtolower($m[2]); // cmd
-   $outFormat=isset($m[3])? substr($m[3],0,1): 'x';
+   $outFormat=isset($m[3])? substr($m[3],0,1): $format_dft;
    return [$opname,$sval,$inType,$outFormat];
   }
 
