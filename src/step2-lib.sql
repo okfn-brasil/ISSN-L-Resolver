@@ -330,6 +330,7 @@ $f$ LANGUAGE sql IMMUTABLE;
 
 
 
+
 CREATE OR REPLACE FUNCTION issn.parse1_uri(
   --
   -- Converts a URI of any API into 3 parts: api-name, api-path and api-output.
@@ -347,36 +348,38 @@ $func$
 		apiout text;
 		apiout_defaults json;
 		ext_rgx text;
+		vers_rgx text;
 		lastp text;
 	BEGIN
+		vers_rgx := '\-[vV]?(\d[\d\.]*)$';
+		ext_rgx := '\.(json|xml|txt)$';
 		apiout_defaults := '{"issn":"json","getfrag":"json"}'::json;
 		apivers_defaults := '{"issn":["1.0.1","1.0.0"],"getfrag":["1.0.0"]}'::json;
+
 		aux := regexp_split_to_array($1, '/');
 		IF array_length(aux,1)<2 THEN 
 			RETURN array[NULL,'1','path need more itens'];
 		END IF;
 		apiName := lower(aux[1]);
 		aux := array_pop_off(aux);
-		vaux := regexp_matches(apiname,'\-[vV]?(\d[\d\.]*)$');
+		vaux := regexp_matches(apiname,vers_rgx);
 		IF (array_length(vaux,1)=1) THEN 
-			apivers := vaux[1]; 
+			apivers := vaux[1];
+			apiName := regexp_replace(apiName,vers_rgx,''); 
 		ELSE
 			IF apivers_defaults->apiName IS NULL THEN
 	 			RETURN array[NULL,'2','name not exists'];
 			END IF;
-			apivers = (apivers_defaults->>apiName)[1];
+			apivers = (apivers_defaults->apiName)->>1;
 		END IF;
-		ext_rgx := '\.(json|xml|txt)$';
-		apiout := defaults[apiname][apivers];
 		lastp := aux[array_length(aux,1)];
 		vaux := regexp_matches(lastp,ext_rgx);
 		IF (array_length(vaux,1)=1) THEN 
-			apiout := vaux[1]; 
+			apiout := vaux[1];
+			aux[array_length(aux,1)] := regexp_replace(lastp,ext_rgx,'');
 		ELSE
-			apiout = apiout_defaults->>apiName; -- validar caso null
-			aux = array_replace( aux, array_length(aux,1), regexp_replace(lastp,ext_rgx,'') );
+			apiout := apiout_defaults->>apiName; -- validar caso null
 		END IF;
-		RETURN array[apiName,apivers,apiout,aux]; -- array_to_string(aux,'/')];
+		RETURN array[apiName, apivers, apiout, array_to_string(aux,'/')];
 	END;
 $func$ LANGUAGE PLpgSQL IMMUTABLE;
-
