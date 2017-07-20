@@ -28,8 +28,12 @@
  ;
 
 CREATE TABLE issn.info AS -- all zero here, delete and run with issn.info_refresh()
-  SELECT '2017-06-19'::date AS updated_issn, * FROM issn.stats
+  SELECT '2017-06-19'::date AS updated_issn, *, ''::jsonb as api_spec
+  FROM issn.stats
 ;
+
+-- wget https://raw.githubusercontent.com/okfn-brasil/ISSN-L-Resolver/master/swagger.json
+-- COPY  UPDATE issn.info SET api_spec=new file.
 
 CREATE VIEW issn.intcode_demo AS
   SELECT issn_l, count(*) as len, array_agg(issn) as issn_set
