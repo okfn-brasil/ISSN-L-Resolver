@@ -318,3 +318,65 @@ CREATE OR REPLACE FUNCTION issn.jservice(text,text)  RETURNS jsonb AS $fwrap$
   --
   SELECT issn.jservice( issn.cast($1), $2 );
 $fwrap$ LANGUAGE SQL IMMUTABLE;
+
+---- API parsers
+
+
+
+CREATE OR REPLACE FUNCTION array_pop_off(ANYARRAY) RETURNS ANYARRAY AS $f$
+    SELECT $1[2:array_length($1,1)];
+$f$ LANGUAGE sql IMMUTABLE;
+
+
+
+
+CREATE OR REPLACE FUNCTION issn.parse1_uri(
+  --
+  -- Converts a URI of any API into 3 parts: api-name, api-path and api-output.
+  -- Need to enconde here (future by database) the api-output-default.
+  --
+	text  -- an URI, ex. from NGINX's proxy parsing.
+)   RETURNS text[] AS
+$func$
+	DECLARE
+		aux text[];
+		vaux text[];
+		apiname text;
+		apivers text;
+		apivers_defaults json;
+		apiout text;
+		apiout_defaults json;
+		ext_rgx text;
+		lastp text;
+	BEGIN
+		apiout_defaults := '{"issn":"json","getfrag":"json"}'::json;
+		apivers_defaults := '{"issn":["1.0.1","1.0.0"],"getfrag":["1.0.0"]}'::json;
+		aux := regexp_split_to_array($1, '/');
+		IF array_length(aux,1)<2 THEN 
+			RETURN array[NULL,'1','path need more itens'];
+		END IF;
+		apiName := lower(aux[1]);
+		aux := array_pop_off(aux);
+		vaux := regexp_matches(apiname,'\-[vV]?(\d[\d\.]*)$');
+		IF (array_length(vaux,1)=1) THEN 
+			apivers := vaux[1]; 
+		ELSE
+			IF apivers_defaults->apiName IS NULL THEN
+	 			RETURN array[NULL,'2','name not exists'];
+			END IF;
+			apivers = (apivers_defaults->>apiName)[1];
+		END IF;
+		ext_rgx := '\.(json|xml|txt)$';
+		apiout := defaults[apiname][apivers];
+		lastp := aux[array_length(aux,1)];
+		vaux := regexp_matches(lastp,ext_rgx);
+		IF (array_length(vaux,1)=1) THEN 
+			apiout := vaux[1]; 
+		ELSE
+			apiout = apiout_defaults->>apiName; -- validar caso null
+			aux = array_replace( aux, array_length(aux,1), regexp_replace(lastp,ext_rgx,'') );
+		END IF;
+		RETURN array[apiName,apivers,apiout,aux]; -- array_to_string(aux,'/')];
+	END;
+$func$ LANGUAGE PLpgSQL IMMUTABLE;
+
