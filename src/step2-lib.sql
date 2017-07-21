@@ -319,16 +319,51 @@ CREATE OR REPLACE FUNCTION issn.jservice(text,text)  RETURNS jsonb AS $fwrap$
   SELECT issn.jservice( issn.cast($1), $2 );
 $fwrap$ LANGUAGE SQL IMMUTABLE;
 
----- API parsers
+
+------------------------
+-- ANY service
+
+CREATE FUNCTION issn.any_service(
+  --
+  -- Executes a service. Selector for issn.jservice(), issn.xservice(), etc.
+  --
+  p_cmd text,      -- command 
+  p_issn7 int,     -- ISSN integer. (see also text for full ISSN code)
+  p_out text,      -- output datatype.
+  p_apivers text DEFAULT '1.0.0',  -- version (can be discard)
+  p_status  int DEFAULT 200   -- for returning warnings by status code. 
+)  RETURNS jsonb AS $f$
+  SELECT jsonb_build_object('status',p_status,  'result',result)
+  FROM (
+    SELECT CASE 
+      WHEN out='j' THEN issn.Jservice(p_issn7,p_cmd)::text 
+      ELSE issn.Xservice(p_issn7,p_cmd)::text
+      END AS result
+    FROM (SELECT substr(p_out, 1, 1) as out) t1
+  ) t2;
+$f$ LANGUAGE SQL IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION issn.any_service(text,text,text,text DEFAULT '1.0.0') RETURNS jsonb AS $fwrap$
+  --
+  -- Same as issn.any_service(text,int,...), but casting text input.
+  --
+  SELECT issn.any_service( 
+    $1, issn.cast($2), $3, $4, CASE WHEN issn.check($2) THEN 210 ELSE 200 END
+  );
+$fwrap$ LANGUAGE SQL IMMUTABLE;
 
 
+------------------------
+-- API parsers
 
 CREATE OR REPLACE FUNCTION array_pop_off(ANYARRAY) RETURNS ANYARRAY AS $f$
     SELECT $1[2:array_length($1,1)];
 $f$ LANGUAGE sql IMMUTABLE;
 
-
-
+CREATE OR REPLACE FUNCTION json_array_castext(json) RETURNS text[] AS $f$
+  SELECT array_agg(x::text)
+  FROM json_array_elements($1) t(x);
+$f$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE OR REPLACE FUNCTION issn.parse1_uri(
@@ -357,15 +392,15 @@ $func$
 		apivers_defaults := '{"issn":["1.0.1","1.0.0"],"getfrag":["1.0.0"]}'::json;
 
 		aux := regexp_split_to_array($1, '/');
-		IF array_length(aux,1)<2 THEN 
+		IF array_length(aux,1)<2 THEN
 			RETURN array[NULL,'1','path need more itens'];
 		END IF;
 		apiName := lower(aux[1]);
 		aux := array_pop_off(aux);
 		vaux := regexp_matches(apiname,vers_rgx);
-		IF (array_length(vaux,1)=1) THEN 
+		IF (array_length(vaux,1)=1) THEN
 			apivers := vaux[1];
-			apiName := regexp_replace(apiName,vers_rgx,''); 
+			apiName := regexp_replace(apiName,vers_rgx,'');
 		ELSE
 			IF apivers_defaults->apiName IS NULL THEN
 	 			RETURN array[NULL,'2','name not exists'];
@@ -374,7 +409,7 @@ $func$
 		END IF;
 		lastp := aux[array_length(aux,1)];
 		vaux := regexp_matches(lastp,ext_rgx);
-		IF (array_length(vaux,1)=1) THEN 
+		IF (array_length(vaux,1)=1) THEN
 			apiout := vaux[1];
 			aux[array_length(aux,1)] := regexp_replace(lastp,ext_rgx,'');
 		ELSE
@@ -382,4 +417,58 @@ $func$
 		END IF;
 		RETURN array[apiName, apivers, apiout, array_to_string(aux,'/')];
 	END;
+$func$ LANGUAGE PLpgSQL IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION issn.run_api(
+  --
+  -- Run an standard API (see Open API definitions) by its name and path-parameters.
+  -- Is a kind of command-proxy for SQL functions.
+  --
+  p_apiname text,  -- a valid api-name (parsed from URI or endpoint)
+  p_apivers text,  -- a valid api-version (parsed from URI or endpoint)
+  p_path text,     -- the URI-path of api's endpint
+  p_out  text DEFAULT 'json'    -- json, xml or txt
+)   RETURNS json AS    -- returns HTTP status
+$func$
+ DECLARE
+    status int; -- 200
+    apis_specs json; -- array by apiname
+    api text;
+    cmd text;
+    cmdlist text[];
+    parts text[];
+    arg1 text;
+    arg2 text;
+    result json;
+ BEGIN   -- do openApi viria mais informações, mas por hora imaginar que só isso.
+    apis_specs := '{"issn-v1.0.1":["isn","isc","n2c","n2ns"],"getfrag-v1.0.0":["xx"]}'::json;
+    api := p_apiname||'-v'||	p_apivers; -- full name
+    IF apis_specs->api IS NULL THEN
+        RETURN '{"error":2}'::json;  -- conforme p_out
+    END IF;
+    cmdlist := json_array_castext(apis_specs->api);
+    parts   := regexp_split_to_array(p_path, '/');
+    CASE api
+    
+    WHEN 'issn-v1.0.1', 'issn-v1.0.0' THEN
+      arg1 := parts[1]; -- issn
+      cmd   := lower(parts[2]); -- command or endpoint label.
+      IF NOT(cmd = ANY (cmdlist)) THEN
+        RETURN '{"error":3}'::json;  -- conforme p_out
+      END IF;
+      IF  POSITION('-' in arg1)>0 OR char_length(arg1)>7 THEN 
+        result := issn.any_service(cmd,param1,p_out,p_apivers);
+      ELSE -- same except cast to int
+        result := issn.any_service(cmd,param1::int,p_out,p_apivers);
+      END IF;
+    
+    WHEN 'getfrag-v1.0.0' THEN
+      result := '{"error":10}'::json; --'under construction';
+    
+    ELSE
+      result := '{"error":4}'::json;  -- invalid api's full-name
+    END CASE;
+    RETURN result;
+ END
 $func$ LANGUAGE PLpgSQL IMMUTABLE;
