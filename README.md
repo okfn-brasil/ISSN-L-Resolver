@@ -1,8 +1,6 @@
 ISSN-L-resolver
 ===============
 
-&nbsp; (see [OpenAPI description *ISSN-L-resolver/1.0.1*](https://app.swaggerhub.com/apis/ppKrauss/ISSN-L-resolver/1.0.1))
-
 **ISSN** is a standard public [opaque identifier](https://en.wikipedia.org/wiki/Unique_identifier) for [journals](https://en.wikipedia.org/wiki/Periodical_publication), assigned by the [ISSN-ORG authority](http://www.issn.org). Its main function is to be a short alias for the [systematic name](https://en.wikipedia.org/wiki/Systematic_name) of the journal, uniquely identifying the publication content (*ISSN-L*) or a specific [media type](https://en.wikipedia.org/wiki/Media_(communication)) of the publication. In the latter case, for example, the same journal can have an *eletronic-ISSN* and a *print-ISSN*, which identifies its electronic and printed publications separately.
 
 The **ISSN-L resolver** converts any ISSN to its corresponding [ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN) ("linking ISSN") using a lightweight SQL structure:
@@ -31,6 +29,18 @@ The webservice was implemented in three parts:
 
  3. The webservice controller, implemented as a PHP script, that mediate Apache and SQL.
 
+## Installing database ##
+
+Run all SQL steps of [`src`](src). For a default database connection, at Linux terminal, you can use:
+
+```
+git clone https://github.com/okfn-brasil/ISSN-L-Resolver.git
+cd ISSN-L-Resolver
+PGPASSWORD=postgres psql -h localhost -U postgres  issnl < src/step1-schema.sql
+PGPASSWORD=postgres psql -h localhost -U postgres  issnl < src/step2-lib.sql
+PGPASSWORD=postgres psql -h localhost -U postgres  issnl < src/step3-api.sql
+```
+To test populating script use `php src/step4-issnltables2sql.php`, to test functions with no database check by ` psql`.
 
 ## Populating ##
 
@@ -46,22 +56,22 @@ but only a half (9Mb) is about "ISSN to ISSN-L" table, and, at SQL database, wit
 With `issnltables2sql.php` you can convert the file into SQL and then run `psql` to populate. See a test dump  [issnltables.zip](https://github.com/okfn-brasil/videos/raw/master/evento/issnltables.zip)
 
 ### Instructions for populating ###
+
+For demo you can use non-regurlar-update from [this zip](https://github.com/okfn-brasil/videos/raw/master/projeto/ISSN-L-Resolver/ISSN-to-ISSN-L.txt.zip).
+
 Sumary of the shell-script that will following,
 
- 1. create dabase `issnl`
- 2. unzip issnltables.zip in a "issnltables"  folder
- 3. test at terminal with `$ php issnltables2sql.php`
- 4. run all scripts
- 5. if not use for another thing, `rm -r issnltables` and `rm issnltables.zip`
+ 1. after install database (see above section).
+ 2. unzip your updated issnltables.zip in a "issnltables"  folder (or the demo zip cited above)
+ 3. test populating script with `$ php src/step4-issnltables2sql.php`
+ 4. run with `all` parameter,  piping to database.
+ 5. optional, `rm -r issnltables` and `rm issnltables.zip`
 
 So, **start to install**. With `PGPASSWORD=postgres psql -h localhost -U postgres` run `CREATE database issnl;` to create a database. Go to the working folder and run his shell script:
 
-```
+```sh
 cd ISSN-L-Resolver
 unzip issnltables.zip -d issnltables
-PGPASSWORD=postgres psql -h localhost -U postgres  issnl < src/step1-schema.sql
-PGPASSWORD=postgres psql -h localhost -U postgres  issnl < src/step2-lib.sql
-PGPASSWORD=postgres psql -h localhost -U postgres  issnl < src/step3-api.sql
 php src/step4-issnltables2sql.php all | PGPASSWORD=postgres psql -h localhost -U postgres  issnl
 ```
 
@@ -107,11 +117,12 @@ Typical uses for resolver functions:
 ### With the DEMO ###
 See  `/demo` folder or a *live demo* at  [`api.ok.org.br`](http://api.ok.org.br) <!--or [`cta.if.ufrgs.br/ISSN-L`](http://cta.if.ufrgs.br/ISSN-L/index.php).-->
 
-### With webservice ###
+### With webservice (API) ###
 
-See [swagger.yaml](swagger.yaml) or http://api.ok.org.br#issn, for [OpenApi](http://openapis.org)'s ISSN-API definition.
 
-See server interface example at [src/resolve.php](src/resolve.php). It can be used with NGINX by
+For [OpenApi](http://openapis.org)'s ISSN-API definition, see [swagger.yaml](swagger.yaml) (from [*ISSN-L-resolver/1.0.1*](https://app.swaggerhub.com/apis/ppKrauss/ISSN-L-resolver/1.0.1)) or http://api.ok.org.br#issn.
+
+For server resolver middleware, see [src/resolve.php](src/resolve.php). The middleware can serverd by [NGINX](NGINX.org) with other API's (eg. `getdoc`, `getfrag`, etc.) as this Nginx configurartion script:
 
 ```sh
 server {
