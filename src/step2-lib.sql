@@ -4,23 +4,48 @@
 -- v1.0-2014 of https://github.com/ppKrauss/ISSN-L-resolver
 --
 
-CREATE SCHEMA IF NOT EXISTS issn;  -- ISSN-only library.
-CREATE SCHEMA IF NOT EXISTS lib;   -- general commom library.
 
+CREATE SCHEMA IF NOT EXISTS issn; -- ISSN-only library.
 
-CREATE OR REPLACE FUNCTION issn.info_refresh(date) RETURNS void AS $func$
+CREATE SCHEMA IF NOT EXISTS lib;  -- general commom library.
+
+------------------------
+-- General-use array functions from (std) LIB
+
+CREATE or replace FUNCTION lib.array_pop_off(ANYARRAY) RETURNS ANYARRAY AS $f$
+    SELECT $1[2:array_length($1,1)];
+$f$ LANGUAGE sql IMMUTABLE;
+
+CREATE or replace FUNCTION lib.json_array_castext(json) RETURNS text[] AS $f$
+  SELECT array_agg(x)
+  FROM json_array_elements_text($1) t(x);
+$f$ LANGUAGE sql IMMUTABLE;
+
+-- -- -- -- -- -- -- -- -- -- --
+
+CREATE or replace FUNCTION issn.info_refresh(
+  p_updated_date date,
+  p_updated_file text
+) RETURNS void AS $func$
   --
   -- DELETE and relace info by fresh one. Use only when updating.
   --
   DELETE FROM issn.info;
-  INSERT INTO issn.info SELECT $1 AS updated_issn, * FROM issn.stats;
+  INSERT INTO issn.info
+    SELECT
+        NULL::jsonb as api_spec,
+        now() AS thisrecord_created,
+        $1 AS updated_date,
+        $2 AS updated_file,
+        *
+    FROM issn.stats;
 $func$ LANGUAGE SQL;
 
 
 -- -- -- -- -- -- -- -- -- -- --
 -- text ISSN util functions   --
 
-CREATE OR REPLACE FUNCTION issn.format(text)
+CREATE or replace FUNCTION issn.format(text)
   --
   -- Transform a "free ISSN" string in a well-formated standard one.
   --
@@ -32,7 +57,7 @@ $func$
 $func$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION issn.check(issn text)
+CREATE or replace FUNCTION issn.check(issn text)
   --
   -- Checks the check digit of a ISSN string (free or formated).
   --
@@ -67,7 +92,7 @@ BEGIN
 END;
 $func$ LANGUAGE PLpgSQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION issn.cast(text) RETURNS int AS $func$
+CREATE or replace FUNCTION issn.cast(text) RETURNS int AS $func$
   --
   -- Converts a "free ISSN string" into a integer ISSN.
   --
@@ -77,7 +102,7 @@ $func$ LANGUAGE SQL IMMUTABLE;
 -- -- -- -- -- -- -- -- -- --
 -- int ISSN util functions --
 
-CREATE OR REPLACE FUNCTION issn.digit8(int)
+CREATE or replace FUNCTION issn.digit8(int)
   --
   -- Calculates the "check digit" of an integer ISSN.
   --
@@ -114,7 +139,7 @@ END;
 $func$ LANGUAGE PLpgSQL IMMUTABLE;
 
 -- depends on digit8
-CREATE OR REPLACE FUNCTION issn.cast(int)  RETURNS text AS $func$
+CREATE or replace FUNCTION issn.cast(int)  RETURNS text AS $func$
   --
   -- Converts an "integer ISSN" into a standard text ISSN.
   -- Must be used only for database's oficial ISSNs.
@@ -127,51 +152,51 @@ $func$ LANGUAGE SQL IMMUTABLE;
 -- (complete and symmetric set)  --
 -- isC, isN, N2C, N2Ns, N2Ns_formated
 
-CREATE OR REPLACE FUNCTION issn.isC(int)  RETURNS smallint AS $func$
+CREATE or replace FUNCTION issn.isC(int)  RETURNS boolean AS $func$
   --
   -- Returns 1 when input is an ISSN-L, NULL when is bigger than max, 0 otherwise.
   SELECT COALESCE(
-    (SELECT  1::smallint as r  FROM issn.intcode WHERE issn_l=$1 LIMIT 1),
-    (SELECT  CASE WHEN $1<=issn_max AND $1>0 THEN 0 ELSE NULL END  FROM issn.info)::smallint
+    (SELECT  true  FROM issn.intcode WHERE issn_l=$1 LIMIT 1),
+    (SELECT  CASE WHEN $1<=issn_max AND $1>0 THEN false ELSE NULL::boolean END  FROM issn.info)
   );
 $func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION issn.isC(text)  RETURNS smallint AS $func$
+CREATE or replace FUNCTION issn.isC(text)  RETURNS boolean AS $func$
   --
   -- Same as issn.isC(int), but casting and checking text input.
-  -- Returns 2 when digit is invalid or has no check-digit.
+  -- Returns NULL when input is out of range or check-digit is invalid.
   --
-  SELECT CASE WHEN NOT(issn.check($1)) THEN r*2::smallint ELSE r END
+  SELECT CASE WHEN NOT(issn.check($1)) THEN NULL ELSE r END
   FROM (
     SELECT issn.isC( issn.cast($1) ) as r
   ) as t;
 $func$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION issn.isN(int)  RETURNS smallint AS $func$
+CREATE or replace FUNCTION issn.isN(int) RETURNS boolean AS $func$
   --
   -- Check if it is a valid name. Returns 1 when input is an ISSN,
   -- returns NULL when is bigger than max, 0 otherwise.
   -- NOTE: "isN service" in the RFC2169 jargon.
   SELECT COALESCE(
-    (SELECT 1::smallint as r FROM issn.intcode WHERE issn=$1),
-    (SELECT  CASE WHEN $1<=issn_max AND $1>0 THEN 0::smallint ELSE NULL::smallint END  FROM issn.info)
+    (SELECT true FROM issn.intcode WHERE issn=$1),
+    (SELECT  CASE WHEN $1<=issn_max AND $1>0 THEN false ELSE NULL::boolean END  FROM issn.info)
   );
 $func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION issn.isN(text)  RETURNS smallint AS $func$
+CREATE or replace FUNCTION issn.isN(text)  RETURNS boolean AS $func$
   --
   -- Same as issn.isN(int), but casting and checking text input.
-  -- Returns 2 when digit is invalid or has no check-digit.
+  -- Returns NULL when input is out of range or check-digit is invalid.
   --
-  SELECT CASE WHEN NOT(issn.check($1)) THEN r+1::smallint ELSE r END
+  SELECT CASE WHEN NOT(issn.check($1)) THEN NULL::boolean ELSE r END
   FROM (
     SELECT issn.isN( issn.cast($1) ) as r
   ) as t;
 $func$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION issn.N2C(int)  RETURNS int AS $func$
+CREATE or replace FUNCTION issn.N2C(int)  RETURNS int AS $func$
   --
   -- Returns the integer ISSN-L of any integer ISSN.
   -- Returns NULL if the input not exists.
@@ -181,15 +206,16 @@ CREATE OR REPLACE FUNCTION issn.N2C(int)  RETURNS int AS $func$
   SELECT issn_l FROM issn.intcode WHERE issn=$1;
 $func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION issn.N2C(text)  RETURNS int AS $func$
+CREATE or replace FUNCTION issn.N2C(text)  RETURNS int AS $func$
   --
   -- Same as issn.N2C(int), but casting text inputs.
+  -- Returns NULL when input is out of range or check-digit is invalid.
   --
   SELECT issn.N2C( issn.cast($1) );
 $func$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION issn.N2Ns(int)  RETURNS int[] AS $func$
+CREATE or replace FUNCTION issn.N2Ns(int)  RETURNS int[] AS $func$
   --
   -- Returns all ISSNs linked to a ISSN.
   -- Returns NULL if the input not exists.
@@ -201,7 +227,7 @@ CREATE OR REPLACE FUNCTION issn.N2Ns(int)  RETURNS int[] AS $func$
   WHERE issn_l=issn.N2C($1);
 $func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION issn.N2Ns(text)  RETURNS int[] AS $func$
+CREATE or replace FUNCTION issn.N2Ns(text)  RETURNS int[] AS $func$
   --
   -- Same as issn.N2Ns(int), but casting text input.
   --
@@ -209,7 +235,7 @@ CREATE OR REPLACE FUNCTION issn.N2Ns(text)  RETURNS int[] AS $func$
 $func$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION issn.N2Ns_formated(int)  RETURNS text[] AS $func$
+CREATE or replace FUNCTION issn.N2Ns_formated(int)  RETURNS text[] AS $func$
   --
   -- Same as issn.N2Ns(int), but returning text formated ISSNs
   --
@@ -218,7 +244,7 @@ CREATE OR REPLACE FUNCTION issn.N2Ns_formated(int)  RETURNS text[] AS $func$
   WHERE issn_l=issn.N2C($1);
 $func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION issn.N2Ns_formated(text)  RETURNS text[] AS $func$
+CREATE or replace FUNCTION issn.N2Ns_formated(text)  RETURNS text[] AS $func$
   --
   -- Same as issn.N2Ns_formated(int), but casting text input.
   --
@@ -229,7 +255,7 @@ $func$ LANGUAGE SQL IMMUTABLE;
 -- -- -- -- -- -- -- -- -- -- --
 -- Services, T=text, X=XML and J=JSON --
 
-CREATE OR REPLACE FUNCTION issn.tservice(
+CREATE or replace FUNCTION issn.tservice(
   --
   -- Performs a "issn.*()" function and returns into a plain text.
   --
@@ -248,14 +274,14 @@ BEGIN
    END, ''); -- case
 END;
 $func$ LANGUAGE plpgsql IMMUTABLE;
-CREATE OR REPLACE FUNCTION issn.tservice(text,text)  RETURNS text AS $func$
+CREATE or replace FUNCTION issn.tservice(text,text)  RETURNS text AS $func$
   --
   -- Same as issn.tservice(int,text), but casting text input.
   --
   SELECT issn.tservice( issn.cast($1), $2 );
 $func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION issn.xservice(
+CREATE or replace FUNCTION issn.xservice(
   --
   -- Performs a "issn.*()" function and returns into a XML.
   --
@@ -280,7 +306,7 @@ BEGIN
    END; -- case
 END;
 $func$ LANGUAGE plpgsql IMMUTABLE;
-CREATE OR REPLACE FUNCTION issn.xservice(text,text)  RETURNS xml AS $fwrap$
+CREATE or replace FUNCTION issn.xservice(text,text)  RETURNS xml AS $fwrap$
   --
   -- Same as issn.xservice(int,text), but casting text input.
   --
@@ -288,7 +314,7 @@ CREATE OR REPLACE FUNCTION issn.xservice(text,text)  RETURNS xml AS $fwrap$
 $fwrap$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION issn.jservice(
+CREATE or replace FUNCTION issn.jservice(
   --
   -- Performs a "issn.*()" function and returns into a JSON.
   --
@@ -299,11 +325,11 @@ BEGIN
   cmd := lower(cmd);
   RETURN
   CASE WHEN cmd='isc' THEN
-    to_jsonb(  COALESCE(issn.isc($1),null) )
+    to_jsonb(  issn.isc($1) )
    WHEN cmd='isn' THEN
-    to_jsonb(  COALESCE(issn.isn($1),null) )
+    to_jsonb(  issn.isn($1) )
    WHEN cmd='n2c' THEN
-    to_jsonb(  COALESCE(issn.cast(issn.n2c($1)),null) )
+    to_jsonb(  issn.cast(issn.n2c($1)) )
    WHEN cmd='n2ns' THEN (
      SELECT to_jsonb( array_agg(i) )
      FROM  (SELECT unnest( issn.n2ns_formated($1) ) as i ) as t
@@ -314,7 +340,7 @@ BEGIN
 END;
 $func$ LANGUAGE plpgsql IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION issn.jservice(text,text)  RETURNS jsonb AS $fwrap$
+CREATE or replace FUNCTION issn.jservice(text,text)  RETURNS jsonb AS $fwrap$
   --
   -- Same as issn.jservice(int,text), but casting text input.
   --
@@ -325,7 +351,7 @@ $fwrap$ LANGUAGE SQL IMMUTABLE;
 ------------------------
 -- ANY service
 
-CREATE OR REPLACE FUNCTION issn.any_service(
+CREATE or replace FUNCTION issn.any_service(
   --
   -- Executes a service. Selector for issn.jservice(), issn.xservice(), etc.
   -- Example: issn.any_service('n2c',1234,'xml');
@@ -346,7 +372,7 @@ CREATE OR REPLACE FUNCTION issn.any_service(
   ) t2;
 $f$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION issn.any_service(text,text,text,text DEFAULT '1.0.0') RETURNS jsonb AS $fwrap$
+CREATE or replace FUNCTION issn.any_service(text,text,text,text DEFAULT '1.0.0') RETURNS jsonb AS $fwrap$
   --
   -- Same as issn.any_service(text,int,...), but casting text input.
   -- Example: issn.any_service('n2ns','0000-0043','j'); -- or 0000-004X to change status
@@ -357,90 +383,29 @@ CREATE OR REPLACE FUNCTION issn.any_service(text,text,text,text DEFAULT '1.0.0')
 $fwrap$ LANGUAGE SQL IMMUTABLE;
 
 ------------------------
--- General-use array functions
-
-CREATE OR REPLACE FUNCTION lib.array_pop_off(ANYARRAY) RETURNS ANYARRAY AS $f$
-    SELECT $1[2:array_length($1,1)];
-$f$ LANGUAGE sql IMMUTABLE;
-
-CREATE OR REPLACE FUNCTION lib.json_array_castext(json) RETURNS text[] AS $f$
-  SELECT array_agg(x)
-  FROM json_array_elements_text($1) t(x);
-$f$ LANGUAGE sql IMMUTABLE;
-
-
-------------------------
--- API generic parsers
-
-CREATE OR REPLACE FUNCTION lib.parse1_uri(
-  --
-  -- Converts a URI of any API into 3 parts: api-name, api-path and api-output.
-  -- Need to enconde here (future by database) the api-output-default.
-  -- Example: lib.parse1_uri('issn-v1.0.0/0004/n2ns');
-	text  -- an URI, ex. from NGINX's proxy parsing.
-)   RETURNS text[] AS
-$func$
-	DECLARE
-		aux text[];
-		vaux text[];
-		apiname text;
-		apivers text;
-		apivers_defaults json;
-		apiout text;
-		apiout_defaults json;
-		ext_rgx text;
-		vers_rgx text;
-		lastp text;
-	BEGIN
-		vers_rgx := '\-[vV]?(\d[\d\.]*)$';
-		ext_rgx := '\.(json|xml|txt)$';
-		apiout_defaults := '{"issn":"json","getfrag":"json"}'::json;
-		apivers_defaults := '{"issn":["1.0.1","1.0.0"],"getfrag":["1.0.0"]}'::json;
-
-		aux := regexp_split_to_array($1, '/');
-		IF array_length(aux,1)<2 THEN
-			RETURN array[NULL,'1','path need more itens'];
-		END IF;
-		apiName := lower(aux[1]);
-		aux := lib.array_pop_off(aux);
-		vaux := regexp_matches(apiname,vers_rgx);
-		IF (array_length(vaux,1)=1) THEN
-			apivers := vaux[1];
-			apiName := regexp_replace(apiName,vers_rgx,'');
-		ELSE
-			IF apivers_defaults->apiName IS NULL THEN
-	 			RETURN array[NULL,'2','name not exists'];
-			END IF;
-			apivers = (apivers_defaults->apiName)->>1;
-		END IF;
-		lastp := aux[array_length(aux,1)];
-		vaux := regexp_matches(lastp,ext_rgx);
-		IF (array_length(vaux,1)=1) THEN
-			apiout := vaux[1];
-			aux[array_length(aux,1)] := regexp_replace(lastp,ext_rgx,'');
-		ELSE
-			apiout := apiout_defaults->>apiName; -- validar caso null
-		END IF;
-		RETURN array[apiName, apivers, apiout, array_to_string(aux,'/')];
-	END;
-$func$ LANGUAGE PLpgSQL IMMUTABLE;
-
-------------------------
 -- API specialized wrap for issn.any_service()
 
-CREATE OR REPLACE FUNCTION issn.run_api(
-  cmd text, arg1 text, p_out text, p_apivers text
+CREATE or replace FUNCTION issn.run_api(
+  cmd text,   --
+  arg1 text,  -- main command
+  p_out text,  -- output type
+  p_apivers text
 ) RETURNS jsonb AS $func$
+-- NAO PODE RETORNAR NULL
 DECLARE
+  api text; -- API full-name
   arg1 text;
   apis_specs json;
   cmd  text;
   cmdlist text[];
 BEGIN
-  apis_specs := '{"issn-v1.0.1":["isn","isc","n2c","n2ns"],"issn-v1.0.0":["isn","isc","n2c","n2ns"],"getfrag-v1.0.0":["xx"]}'::json;
+  apis_specs := '{"issn-v1.0.1":["isn","isc","n2c","n2ns"],"issn-v1.0.0":["isn","isc","n2c","n2ns"]}'::json;
+  api := 'issn-v'||	p_apivers; -- full name
+  IF apis_specs->api IS NULL THEN
+      RETURN json_build_object('error',533,  'msg','nao achei specs de api='||api);
+  END IF;
   cmdlist := lib.json_array_castext(apis_specs->api);
   arg1 := parts[1]; -- ISSN code-string or code-integer.
-  cmd  := lower(parts[2]); -- command or endpoint label.
   IF NOT(cmd = ANY(cmdlist)) THEN
     RETURN jsonb_build_object('error',3,  'msg','nao achei cmd='||cmd );
   END IF;
@@ -451,63 +416,3 @@ BEGIN
   END IF;
 END
 $func$ LANGUAGE PLpgSQL IMMUTABLE;
-
-------------------------
--- API generic joining specifics
-
-CREATE OR REPLACE FUNCTION lib.run_any_api(
-  --
-  -- FINAL RESULT for API.
-  -- Run an standard API (see Open API definitions) by its name and path-parameters.
-  -- Is a kind of command-proxy for SQL functions.
-  -- Seems a Strategy design pattern (also Proxy, Composite or Interpreter)
-  --
-  p_apiname text,  -- a valid api-name (parsed from URI or endpoint)
-  p_apivers text,  -- a valid api-version (parsed from URI or endpoint)
-  p_path text,     -- the URI-path of api's endpint
-  p_out  text DEFAULT 'json'    -- json, xml or txt
-)   RETURNS json AS    -- returns HTTP status
-$func$
- DECLARE
-    status int; -- 200
-    apis_specs json; -- array by apiname
-    api text;
-    cmd text;
-    parts text[];
-    arg1 text;
-    arg2 text;
-    result json;
- BEGIN   -- do openApi viria mais informações, mas por hora imaginar que só isso.
-
-    api := p_apiname||'-v'||	p_apivers; -- full name
-    IF apis_specs->api IS NULL THEN
-        RETURN json_build_object('error',2,  'msg','nao achei specs de api='||api);
-    END IF;
-    parts   := regexp_split_to_array(p_path, '/');
-    CASE api
-    WHEN 'issn-v1.0.1', 'issn-v1.0.0' THEN
-      result := issn.run_api(parts[2],parts[1],p_out,p_apivers)::json;
-
-    WHEN 'getfrag-v1.0.0' THEN
-      result := '{"error":10}'::json; --'under construction';
-
-    ELSE
-      result := '{"error":4}'::json;  -- invalid api's full-name
-    END CASE;
-    RETURN result;
- END
-$func$ LANGUAGE PLpgSQL IMMUTABLE;
-
-------------------------
--- API generic
-
-CREATE OR REPLACE FUNCTION lib.run_api_byuri(text) RETURNS json AS $f$
-  -- Wrap for join lib.run_any_api() with lib.parse1_uri().
-  SELECT CASE
-    WHEN s[1] IS NULL THEN
-      json_build_object('error',s[2],  'msg',s[3])
-    ELSE
-      lib.run_any_api(s[1],s[2],s[4],s[3])
-    END
-  FROM  lib.parse1_uri($1) t(s);
-$f$ LANGUAGE sql IMMUTABLE;

@@ -59,9 +59,10 @@ So, **start to install**. With `PGPASSWORD=postgres psql -h localhost -U postgre
 ```
 cd ISSN-L-Resolver
 unzip issnltables.zip -d issnltables
-PGPASSWORD=postgres psql -h localhost -U postgres  issnl < step1-schema.sql
-PGPASSWORD=postgres psql -h localhost -U postgres  issnl < step2-lib.sql
-php step3-issnltables2sql.php all | PGPASSWORD=postgres psql -h localhost -U postgres  issnl
+PGPASSWORD=postgres psql -h localhost -U postgres  issnl < src/step1-schema.sql
+PGPASSWORD=postgres psql -h localhost -U postgres  issnl < src/step2-lib.sql
+PGPASSWORD=postgres psql -h localhost -U postgres  issnl < src/step3-api.sql
+php src/step4-issnltables2sql.php all | PGPASSWORD=postgres psql -h localhost -U postgres  issnl
 ```
 
 ## Resolving ##
@@ -104,97 +105,33 @@ Typical uses for resolver functions:
   -- returns {0000-0671,0000-1155,0065-759X,0065-910X,0068-0540,0074-6827,1067-8166}
 ```
 ### With the DEMO ###
-See  `/demo` folder or a *live demo* at  [`xmlfusion.org/demo/urn-microservice`](http://xmlfusion.org/demo/urn-microservice) or [`cta.if.ufrgs.br/ISSN-L`](http://cta.if.ufrgs.br/ISSN-L/index.php).
+See  `/demo` folder or a *live demo* at  [`api.ok.org.br`](http://api.ok.org.br) <!--or [`cta.if.ufrgs.br/ISSN-L`](http://cta.if.ufrgs.br/ISSN-L/index.php).-->
 
 ### With webservice ###
 
-At a webservice's endpoint, ex. `http://ws.myDomain/issn-resolver`, use `xws.` for XML-webservice, `jws.` for JSON-webservice.
+See [swagger.yaml](swagger.yaml) or http://api.ok.org.br#issn, for [OpenApi](http://openapis.org)'s ISSN-API definition.
 
-**Standard [endpoint](http://www.w3.org/TR/wsdl20/#Endpoint) rule syntax**:
+See server interface example at [src/resolve.php](src/resolve.php). It can be used with NGINX by
 
+```sh
+server {
+        server_name api.myexample.org;
+        root   /var/www/api.myexample.org;
+        index  index.php index.html index.htm;
+        location / {
+                try_files $uri $uri/ @rewriteIt;
+        }
+        location  @rewriteIt {
+                rewrite ^/?(issn|getfrag|trazdia|getdoc)/
+                        /resolver.php?$uri  last;
+                rewrite ^/?(.*)$
+                        /error.php?$1       last;
+        }
+        location ~ \.php$ {
+                try_files $uri =404;
+                include /etc/nginx/fastcgi.conf;
+                fastcgi_pass unix:/run/php/php7.0-fpm.sock;
+        }
+        # optional include snippets/ssl-myexample.org.conf;
+} #end server
 ```
-    http://<subdomain> "." <domain> "/" <query>
-      <subdomain> =  [<catalog-name> "."] <ws-format>
-      <ws-format> = "tws" | "hws" | "jws" | "xws" | "ws"
-      <query>     = <urn> | <operation> "/" <urn>
-      <urn>       = "urn:" <urn-schema> ":" <urn-value> | <urn-value>
-```
-
-that webservice endpoint's are "short URLs", like this request in a "journal" catalog, `http://jou.tws.myExample.org/n2n/123456`.
-
-Another option, if you can not change subdomain, is a not-so-short-URL, with the same information in the path part of [URL](https://en.wikipedia.org/wiki/Uniform_Resource_Locator):
-
-```
-    http://"ws." <domain> "/" <query>
-      <query>     = <io-format> "/" <operation> "/" <urn>
-      <operation> = <io-format> "." <catalog-name> "." <op-name> | <io-format> "." <op-name>
-      <io-format> = "text" | "html" | "json" | "xml" | "auto"
-      <catalog-name>  = "jou" | "art" | "issue" | "auto"
-      <op-name>   = "N2N" | "N2Ns" | "N2C" | "N2Cs" | "N2U" | "N2Us" | "isN"| "isC" | "info"
-      <urn>       = "urn:" <urn-schema> ":" <urn-value> | <urn-value>
-```
-
-any other bigger or complex parameter, must use HTTP POST, or send GET parameters in an usual query-URL (using ex. the [OpenURL standard](https://en.wikipedia.org/wiki/OpenURL)).
-
-The alone `<urn-value>` is for local default URN schemas, when exist (ex. a subdomain where only ISSN is used, not need to express all "urn:issn:" prefix). The `<operation> "/" <urn>` option is usual in contexts where is difficult to solicitate more `<specific-name>` subdomains for each operation.
-
-The `<ws-format>` convention is
- * "h" for HTML format, in a "human readable" usual context.
- * "x" for XML format in a WSDL2 webservice context.
- * "j" for JSON format, in a JOSN-RPC or similar context.
- * "t" for old *MIME text/plain* output format, a simplification of the XML output, for tests and terminal debuging.
-
-The "ws" `<ws-format>` is a "web-service catalog describer" endpoint, describing each endpoint, by some format (in a `/html`, `/txt`, `/json`, or `/xml` format).
-
-Example: `http://issn.jws.example.org/1234-9223` returns the default operation for the standard query, that is something like a [catalog card](https://en.wikipedia.org/wiki/Library_catalog#Catalog_card) of the corresponding journal.
-
-**Standard operations**: a [WSDL file](https://en.wikipedia.org/wiki/WSDL#Example_WSDL_file) describes services as collections of network endpoints, so, in the same intention, this document describes a set of interoperable endpoints focusing on the handling of ISSN-URNs. As suggested by the [old IETF's RFC-2169](http://tools.ietf.org/html/rfc2169), some typical *"ISSN resolution"* services can be offered, in response to the `<query>`,
-
- * *N2C*: the *ISSN-L* of the input. See SQL `issn.n2c()`.
- * *N2Ns*: all the ISSNs grouped by a ISSN-L associated with the input. See SQL `issn.n2ns()`.
- * *N2U*: the "journal's official URL", where "official" is in the context of the webservice server entity. No implementation here, only an illustrative operation.
- * *N2Us*: all the "journal's URLs", when exist more than one. No implementation here, only an illustrative operation.
- * *isN*: check if a query string is a valid ISSN (registered in the database).
- * *isC*: like *isN* but also checking format. See SQL `issn.check()`.
- * *info*: the *card catalog* of the object pointed by the URN. Illustrative.
-
-These basic ISSN resolution operations, solves most of the commom interoperability problems. Of course, any other simple (1 operand) operation can be add as new `op-name` or a (2 or more operands) as a complete URL.
-
-#### Endpoint URL examples
-URL example and description:
-
- * `http://jou.tws.myExample.org/n2n/123456` - Context="journal", io-format="text", operation="n2n" (resolve name replaying name), URN=123456 (using default URN-schema=issn and reference-URN).
- * `http://ws.myExample.org/text.jou.n2n/123456` - idem above, but with context and format at path.
- * `http://ws.myExample.org/text.auto/0123-456X` - similar to above, but with default operation (`info`) and default (or auto-detect) URN-schema.
- * ...
- * `http://jou.tws.myExample.org/n2n/urn:issn:123456` - ...
- * ...
- * `http://jou.tws.myExample.org/?cmd=n2n&q=urn:issn:123456` - ...
- * ...
-
-## Implementations ##
-Some notes about each specific implementation.
-
-### PostgreSQL library ###
-...
-
-### Apache2 .htaccess ###
-On the VirtualHost's `DocumentRoot` directory of the mapped `ServerName` (`<subdomain>.<domain>`), add the folowing `.htaccess` file, for an `<operation> "/" <urn>` endpoint syntax option:
-
-```
-RewriteEngine on
-
-# If requested url is an existing file or folder, don't touch it
-RewriteCond %{REQUEST_FILENAME} -d [OR]
-RewriteCond %{REQUEST_FILENAME} -f
-RewriteRule . - [L]
-
-# If we reach here, this means it's not a file or folder, we can rewrite...
-RewriteRule ^(?:urn:(issn):)?([0-9][\d\-]*X?)$                           index.php?cmd=std&urn_schema=$1&q=$2 [L]
-RewriteRule ^(n2ns?|n2us?|isn|isc)/(?:urn:(issn):)?([0-9][\d\-]*X?)$     index.php?cmd=$1&urn_schema=$2&q=$3 [L]
-```
-
-### PHP webservices ###
-... index.php ...
-
-For tuning and performance, see "microservices strategies" as http://nginx.com/blog/realtime-applications-nginx/

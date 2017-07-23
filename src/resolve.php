@@ -1,109 +1,83 @@
 <?php
 /**
- * Run as web-service or terminal command. Requires PHP v7.1.
- * Commands  N2C,N2Ns,isN,isC,info, list, ...
- * By terminal:
- *   php resolve.php -j --n2n 12345
- *   php resolver.php -j -q 12345/n2c
- * By Web:
- *  http://issn.oficial.news/123/N2C
- *  http://teste.oficial.news/resolve.php?opname=n2c&issn7=1
- *  http://teste.oficial.news/resolve.php?opname=N2Ns&issn=0001-3439&format=x
+ * Index or include for console.  Basic GENERIC APP SERVER for SQL-defined services.
+ * For OpenAPI implementation of a SQL-based set of services.
+ * Best alternative: PostGraphQL
+ * Best complement: PostgREST-writeAPI
+ * @see future, output accept content negotiation...
  */
 
-include('conf.php');
-$format_dft = 'j';
-$debug = 0;
+// FALTA trazer de volta o modo de output e decidir o que fazer com os error codes adicionais.
 
-if ($is_cli) {
-  $optind = null;
-  $opts = getopt('hjxdq:', $cmdValid, $optind); // exige PHP7.1  -d=debug
-  $extras = array_slice($argv, $optind);
-  $outFormat = isset($opts['x'])? 'x': (isset($opts['t'])? 't': $format_dft);  // x|j|t
-  unset($opts['x']);unset($opts['j']);
-  $cmd = array_keys($opts);
-  if (isset($opts['q']))
-      list($opname,$sval,$outType,$outFormat) = apiGateway_parsePath($opts['q']);
-  else {
-  	if (isset($opts['h']) || !count($extras) || count($cmd)!=1)
-    		die("\n---- ISSN-L RESOLVER -----\n".file_get_contents('synopsis.txt')." \n");
-  	$sval = $extras[0];
-  	$opname = strtolower(trim($cmd[0]));
-  	$outType   = 'int';
-	//$debug =0;
-  }
-} elseif (isset($_GET['q']))
-  list($opname,$sval,$outType,$outFormat) = apiGateway_parsePath($_GET['q']);
-else {
- 	$opname = isset($_GET['opname'])? strtolower(trim($_GET['opname'])): '';
- 	$sval = isset($_GET['sval'])? trim($_GET['sval']): ''; 				// string input
- 	$outFormat = isset($_GET['format'])? trim($_GET['format']): $format_dft; // h|x|j|t
- 	$outType   = 'int';
-        $debug = isset($_GET['debug'])? 1: 0;
-}
+$isCli = (php_sapi_name() === 'cli');
+$res = new app($isCli? ('issn/004/n2ns/argc='.$argc): $_SERVER['QUERY_STRING']);
 
-if (!$sval)  {
-  echo file_get_contents('index.htm');
-  die("\n");
-}
-if (!$is_cli && !$debug) {
-  if ($status!=200) http_response_code($status);
-	header("Content-Type: $outFormatMime[$outFormat]");
-}
+class app {
 
-//echo "\n\n-- $opname,$sval,$outType,$outFormat,$debug\n";
-$output = issnLresolver($opname,$sval,$outType,$outFormat,$debug);
-if ($debug)
-  echo "issnLresolver($opname,$sval,$outType,$outFormat) = [\n\tstatus $status, \n\tout $output[0], \n\tsql $output[1] ]";
-elseif ($outFormat=='j')
-  echo json_encode($output);
-else
-  echo $output;
+  // CONFIGS:
+  var $PG_CONSTR = 'pgsql:host=localhost;port=5432;dbname=issnl';
+  var $PG_USER = 'postgres';
+  var $PG_PW   = 'postgres';
 
-//////////////////// LIB ////////////////////
+  // INITS:
+  var $status = 200;  // 404 - has not found the input issn.  416 - issn format is invalid.
+                      // but 404 is also service-not-found.
+  var $isCli;         // set with true when is client (terminal), else false.
+  var $outFormat_dft='j';
 
-function apiGateway_parsePath($q) {
-  global $format_dft;
-   if (preg_match('#^/?(\d+)/(n2ns|n2c|is[nc])(\.(?:js|json|xml|txt))?$#is', $q, $m))
-      $inType   = 'int';
-   elseif (preg_match('#^/?([0-9][\d\-]*X?)/(n2ns|n2c|is[nc])(\.(?:js|json|xml|txt))?$#is', $q, $m))
-      $inType   = 'str';
-   else
-     die("\nERROR 23: '$q'\n");
-   $sval = $m[1];
-   $opname = strtolower($m[2]); // cmd
-   $outFormat=isset($m[3])? substr($m[3],0,1): $format_dft;
-   return [$opname,$sval,$inType,$outFormat];
+  var $outFormat;     // j=json|x=xml|t=txt
+  var $dbh; // database PDF connection.
+
+  function __construct($uri=NULL) {
+    global $isCli;
+    $this->isCli = isset($isCli)? $isCli: (php_sapi_name() === 'cli');
+    $this->outFormat = $this->isCli? 't': $this->outFormat_dft;
+    $this->dbh = new PDO($this->PG_CONSTR, $this->PG_USER, $this->PG_PW);
+    if ($uri) $this->runByUri($uri); // dies returing output
   }
 
-function issnLresolver($opname,$sval,$vtype='str',$outFormat,$debug=1) {
-	global $PG_CONSTR, $PG_USER, $PG_PW;
-	$r = $sql = '';
-	if ($opname) {
-		switch ($opname) {
-		case 'n2ns':
-		case 'n2c':
-		case 'n2cs':
-		case 'isn':
-		case 'isc':
-    case 'n2n':
-    case 'n2ns':
-			$val = (!$vtype || $vtype=='str')? "'$sval'": $sval;
-			$sqlFCall = "issn.{$outFormat}service($val,'$opname')";  // ex. issn_xservice(8755999,'n2ns');
-			break;
-		case 'info':
-			$sqlFCall = "'... info formated text ...'";
-			break;
-		default:
-			$sqlFCall = "'op-name not knowed'";
-		} // switch
-		$dbh = new PDO($PG_CONSTR, $PG_USER, $PG_PW);
-		$sql = "SELECT $sqlFCall LIMIT 1";
-		//ja tem if ($debug) echo "\n-- SQL=$sql\n";
-		$r = $dbh->query($sql)->fetchColumn();
-		//$r = trim($r,'"');
-  } //switch
-	return $debug? array($r, $sql): $r;
-} // func
+  function runByUri($uri) {
+    if ($this->isCli) $uri.=".".$this->outFormat; // enforce ... future content negotiation.
+    echo "\n SELECT api.run_byuri('$uri')";
+    $sth = $this->dbh->prepare('SELECT api.run_byuri(?)');
+    $sth->bindParam(1, $uri, PDO::PARAM_STR);
+    $sth->execute();
+    $a = json_decode( $sth->fetchColumn(), true); // even XML is into a JSON package.
+    if (isset($a['status']) && $a['status']>0) {
+      $this->status = $a['status'];
+      $r = $a['result'];
+    } else
+      $r = $a;
+      $this->die(json_encode($r)); // need error code?
+  }
+
+  /**
+   * Ending API by die() with no message or with an error.
+   * @param $msg string with returning data from API (or standard error package).
+   * @param $errCode integer, used as ERRROR when $this->status!=200 or as WARNING when $errCode!=0.
+   * @param $newStatus integer optional change of HTTP-status.
+   */
+  function die($msg,$errCode=0,$newStatus=0) {
+    $outFormatMime = ['j'=>'application/json', 'x'=>'application/xml', 't'=>'text/plain'];  // MIME
+    if ($newStatus)
+      $this->status = $newStatus;
+    if ($this->status==200 || !$this->status)
+      $OUT = ($this->outFormat!='x')? (($this->outFormat=='t')? "\n$msg\n": $msg): "<api>$msg</api>";
+    elseif ($this->isCli)
+        die("\nERROR (status {$this->status}) $errCode: $msg\n");
+    else {
+      http_response_code($this->status);
+      if ($errCode)
+        $OUT = ($this->outFormat=='j')?
+          "{'errCode':$errCode,'errMsg':'$msg'}":
+          "<api errCode='$errCode'><errMsg>$msg</errMsg></api>";
+      else
+        $OUT = ($this->outFormat=='j')? $msg: "<api>$msg</api>";
+    }
+    if (!$this->isCli) header("Content-Type: {$outFormatMime[$this->outFormat]}");
+    die($OUT);
+  } // func
+
+} // class
 
 ?>

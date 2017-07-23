@@ -1,5 +1,6 @@
+DROP SCHEMA IF EXISTS issn CASCADE;
+CREATE SCHEMA issn;               -- for ISSN library and dataset.
 
- CREATE SCHEMA IF NOT EXISTS issn;  -- for ISSN library and dataset.
  CREATE TABLE issn.intcode (
     issn integer NOT NULL PRIMARY KEY,
     issn_l integer NOT NULL
@@ -9,14 +10,14 @@
 
  CREATE VIEW issn.stats AS  -- counting for statistics
   WITH cts AS (
-  	SELECT len, count(*) as records
+  	SELECT len_group, count(*) as records
   	FROM (
-  		SELECT count(*) as len
+  		SELECT count(*) as len_group
   		FROM issn.intcode
   		GROUP BY issn_l
   	) t
-  	GROUP BY len
-  	ORDER BY records DESC, len DESC
+  	GROUP BY len_group
+  	ORDER BY records DESC, len_group DESC
   )
   SELECT issn_min, issn_max, numof_issn, numof_issnl, issnl_countings
   FROM
@@ -28,9 +29,15 @@
  ;
 
 CREATE TABLE issn.info AS -- all zero here, delete and run with issn.info_refresh()
-  SELECT '2017-06-19'::date AS updated_issn, *, ''::jsonb as api_spec
+  SELECT  -- copy fields from info_refresh()
+    NULL::jsonb as api_spec,
+    now() AS thisrecord_created,
+    now() AS updated_date,
+    ''::text AS updated_file,
+    *
   FROM issn.stats
 ;
+
 
 -- wget https://raw.githubusercontent.com/okfn-brasil/ISSN-L-Resolver/master/swagger.json
 -- COPY  UPDATE issn.info SET api_spec=new file.
