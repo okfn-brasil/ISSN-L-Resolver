@@ -373,7 +373,7 @@ CREATE or replace FUNCTION issn.any_service(
   p_status  int=200,   -- for returning warnings by status code. See any_service(text,text).
   p_apivers text DEFAULT '1.0.2'  -- version (can be discard)
 )  RETURNS json AS $f$
-  SELECT r --jsonb_build_object('status',p_status,  'result',result)
+  SELECT (r::jsonb || jsonb_build_object( 'outFormat', ('{"x":"xml","j":"json","t":"txt"}'::json)->out ))::json -- gambi, revisar
   FROM (
     SELECT CASE
       WHEN out='t' THEN issn.tservice_jspack(p_issn7,p_cmd,p_status,p_apivers)
@@ -381,7 +381,7 @@ CREATE or replace FUNCTION issn.any_service(
       WHEN out='j' THEN issn.Jservice(p_issn7,p_cmd,p_status,p_apivers)
       ELSE
         json_build_object('status',520,  'result','Unknowing ISSN-API output parameter, '|| out)
-      END
+      END, out
     FROM ( SELECT coalesce(substr(p_out, 1, 1),'?null?') ) t1(out)
   ) t2(r);
 $f$ LANGUAGE SQL IMMUTABLE;

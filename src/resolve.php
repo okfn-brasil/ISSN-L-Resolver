@@ -41,9 +41,10 @@ class app {
     $sth->bindParam(1, $uri, PDO::PARAM_STR);
     $sth->execute();
     $a = json_decode( $sth->fetchColumn(), true); // even XML is into a JSON package.
-    if (isset($a['status']) && $a['status']>0) {
-      $this->status = $a['status'];
-    }
+    if (isset($a['status']) && $a['status']>0)
+      $this->status    = $a['status'];
+    if (isset($a['outFormat']))
+      $this->outFormat = substr($a['outFormat'],0,1);
     $this->die($a['result']); // send string or array
   }
 
@@ -60,19 +61,17 @@ class app {
     if ($this->status==200 || !$this->status) {
       if ($this->outFormat=='x' || $this->outFormat=='t') {
         if (is_array($msg)) $msg = join($msg,','); // supposing only txt case and 1 level of array.
-        $OUT = ($this->outFormat=='x')? "<api>$msg</api>": "\n$msg\n";
+        $OUT = ($this->outFormat=='x')? $msg: "\n$msg\n";
       } else
         $OUT = json_encode($msg);
     } elseif ($this->isCli) // display error at terminal:
         die("\nERROR (status {$this->status}) $errCode: $msg\n");
     else {                  // display error at Web:
       http_response_code($this->status);
-      if ($errCode)
+      if ($errCode) // not in use
         $OUT = ($this->outFormat=='j')?
           "{'errCode':$errCode,'errMsg':'$msg'}":
           "<api errCode='$errCode'><errMsg>$msg</errMsg></api>";
-      else
-        $OUT = ($this->outFormat=='j')? $msg: "<api>$msg</api>";
     }
     if (!$this->isCli) header("Content-Type: {$outFormatMime[$this->outFormat]}");
     die($OUT);

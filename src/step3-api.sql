@@ -90,17 +90,17 @@ $func$
     apis_specs := '{"issn-v1.0.2":["isn","isc","n2c","n2ns"],"issn-v1.0.0":["isn","isc","n2c","n2ns"],"getfrag-v1.0.0":["xx"]}'::json;
     api := p_apiname||'-v'||	p_apivers; -- full name
     IF apis_specs->api IS NULL THEN
-			RETURN json_build_object( 'status',532,  'result','nao achei specs de api='||api );
+			RETURN json_build_object( 'status',532,  'result','nao achei specs de api='||api, 'outFormat',p_out );
     END IF;
     CASE api
     WHEN 'issn-v1.0.2', 'issn-v1.0.0' THEN
 			parts  := issn.parse2_path(p_path); -- returns cmd, arg1 (optional arg2, arg3, etc.)
-      result := issn.run_api(parts[1], parts[2], p_out, p_status, p_apivers)::json;
+      result := issn.run_api(parts[1], parts[2], p_out, p_status, p_apivers)::json; -- returns outForat
 
     WHEN 'getfrag-v1.0.0' THEN
-			result := json_build_object( 'status',555,  'result','under construction' );
+			result := json_build_object( 'status',555,  'result','under construction', 'outFormat',p_out );
     ELSE
-      result := json_build_object( 'status',557,	'result','invalid api-full-name' );
+      result := json_build_object( 'status',557,	'result','invalid api-full-name', 'outFormat',p_out  );
     END CASE;
     RETURN result;
  END
@@ -114,9 +114,9 @@ CREATE or replace FUNCTION api.run_byuri(text) RETURNS json AS $f$
   -- Wrap for join api.run_any() with api.parse1_uri().
   SELECT CASE
     WHEN s[1] IS NULL THEN -- avisa erro:
-      json_build_object('status',s[2],  'result',s[3])
+      json_build_object('status',s[2],  'result',s[3])  -- outFormat?
     ELSE
-      api.run_any(s[1],s[2],s[3],s[4])
+      api.run_any(s[1],s[2],s[3],s[4])  -- check outFormat
     END
   FROM  api.parse1_uri($1) t(s);  -- s1=apiName, s2=apivers, s3=path, s4=apiout
 $f$ LANGUAGE sql IMMUTABLE;
