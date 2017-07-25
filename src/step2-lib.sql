@@ -393,7 +393,7 @@ CREATE or replace FUNCTION issn.any_service(text,text,text,int,text DEFAULT '1.0
 $fwrap$ LANGUAGE SQL IMMUTABLE;
 
 ------------------------
--- API specialized wrap for issn.any_service()
+-- API specialized wrap for api.run_any()
 
 CREATE or replace FUNCTION issn.parse2_path(
   text  --  input as 'int/123/n2c' or '123/n2c'

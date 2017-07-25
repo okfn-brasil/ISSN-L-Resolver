@@ -135,6 +135,13 @@ Typical uses for resolver functions (same as `step5-assert`  script):
   -- returns          {8755999}     <ret status="sucess"><issn>8755-9994</issn></ret>
   SELECT issn.n2ns_formated(115);
   -- returns {0000-0671,0000-1155,0065-759X,0065-910X,0068-0540,0074-6827,1067-8166}
+  SELECT issn.any_service('n2c',67,'xml');
+  -- returns {"status" : 200, "result" : "<ret>115</ret>"}
+  SELECT api.run_any('issn','1.0.2','67/n2c','xml', 500);
+  -- returns {"status" : 500, "result" : "<ret>115</ret>"}
+  SELECT api.run_byuri('issn/67/n2c.xml');
+  -- returns {"status" : 200, "result" : "<ret>115</ret>"}
+
 ```
 ### With the DEMO ###
 See  `/demo` folder or a *live demo* at  [`api.ok.org.br`](http://api.ok.org.br) <!--or [`cta.if.ufrgs.br/ISSN-L`](http://cta.if.ufrgs.br/ISSN-L/index.php).-->

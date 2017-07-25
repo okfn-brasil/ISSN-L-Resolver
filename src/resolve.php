@@ -1,12 +1,12 @@
 <?php
 /**
  * Index or include for console.  Basic GENERIC APP SERVER for SQL-defined services.
- * For OpenAPI implementation of a SQL-based set of services.
- * Best alternative: PostGraphQL
+ * For OpenAPI implementation of a SQL-based set of services. See SQL schema API.
+ * Best alternative for complex services: PostGraphQL
+ * Terminal use: $ php resolve.php  issn-v1.0.2/123/n2c
  * @see https://github.com/okfn-brasil/ISSN-L-Resolver
  * @see future, output accept content negotiation...
  */
-
 
 $isCli = (php_sapi_name() === 'cli');
 $res = new app($isCli? (isset($argv[1])? $argv[1]: 'issn/67/n2ns'): $_SERVER['QUERY_STRING']);
@@ -36,35 +36,36 @@ class app {
   }
 
   function runByUri($uri) {
-    //if ($this->isCli) $uri.=".".$this->outFormat; // enforce ... future content negotiation.
-    //echo "\n SELECT api.run_byuri('$uri')";
+    //if ($this->isCli) $uri =rmExtension($uri).".negotiatedExtension; //... future content negotiation.
     $sth = $this->dbh->prepare('SELECT api.run_byuri(?)');
     $sth->bindParam(1, $uri, PDO::PARAM_STR);
     $sth->execute();
     $a = json_decode( $sth->fetchColumn(), true); // even XML is into a JSON package.
     if (isset($a['status']) && $a['status']>0) {
       $this->status = $a['status'];
-      $r = $a['result'];
-    } else
-      $r = $a;
-    $this->die(json_encode($r)); // need error code?
+    }
+    $this->die($a['result']); // send string or array
   }
 
   /**
-   * Ending API by die() with no message or with an error.
-   * @param $msg string with returning data from API (or standard error package).
-   * @param $errCode integer, used as ERRROR when $this->status!=200 or as WARNING when $errCode!=0.
-   * @param $newStatus integer optional change of HTTP-status.
+   * Ending REST API by die() with a message and coorect HTTP status.
+   * @param $msg string or array with returning data from API (or standard error package).
+   * @param $newStatus integer optional, (will use?) to change of HTTP-status.
+   * @param $errCode integer, NOT IN USE... ERRROR when $this->status!=200 or as WARNING when $errCode!=0.
    */
-  function die($msg,$errCode=0,$newStatus=0) {
+  function die($msg,$newStatus=0,$errCode=0) {
     $outFormatMime = ['j'=>'application/json', 'x'=>'application/xml', 't'=>'text/plain'];  // MIME
     if ($newStatus)
       $this->status = $newStatus;
-    if ($this->status==200 || !$this->status)
-      $OUT = ($this->outFormat!='x')? (($this->outFormat=='t')? "\n$msg\n": $msg): "<api>$msg</api>";
-    elseif ($this->isCli)
+    if ($this->status==200 || !$this->status) {
+      if ($this->outFormat=='x' || $this->outFormat=='t') {
+        if (is_array($msg)) $msg = join($msg,','); // supposing only txt case and 1 level of array.
+        $OUT = ($this->outFormat=='x')? "<api>$msg</api>": "\n$msg\n";
+      } else
+        $OUT = json_encode($msg);
+    } elseif ($this->isCli) // display error at terminal:
         die("\nERROR (status {$this->status}) $errCode: $msg\n");
-    else {
+    else {                  // display error at Web:
       http_response_code($this->status);
       if ($errCode)
         $OUT = ($this->outFormat=='j')?
@@ -78,5 +79,4 @@ class app {
   } // func
 
 } // class
-
 ?>

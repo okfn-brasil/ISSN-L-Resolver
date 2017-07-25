@@ -39,10 +39,10 @@ $func$
 		vaux := regexp_matches(apiname,vers_rgx);
 		IF (array_length(vaux,1)=1) THEN
 			apivers := vaux[1];
-			apiName := 'AAASSQUQU';--regexp_replace(apiName,vers_rgx,'');
+			apiName := regexp_replace(apiName,vers_rgx,'');
 		ELSE
 			IF apivers_defaults->apiName IS NULL THEN
-	 			RETURN array[NULL,'505','API xx name not exists - '||apiName||' - '||$1];
+	 			RETURN array[NULL,'505','API name not exists - '||apiName||' - '||$1];
 			END IF;
 			apivers := (apivers_defaults->apiName)->>0;  -- JSON array starts with zero
 		END IF;
@@ -73,7 +73,8 @@ CREATE or replace FUNCTION api.run_any(
   p_apiname text,  -- a valid api-name (parsed from URI or endpoint)
   p_apivers text,  -- a valid api-version (parsed from URI or endpoint)
   p_path text,     -- the URI-path of api's endpint.
-  p_out  text DEFAULT 'json'    -- json, xml or txt
+  p_out    text='json',    -- json, xml or txt
+	p_status int=200         -- injected HTTP status
 )   RETURNS json AS    -- returns HTTP status
 $func$
  DECLARE
@@ -94,7 +95,7 @@ $func$
     CASE api
     WHEN 'issn-v1.0.2', 'issn-v1.0.0' THEN
 			parts  := issn.parse2_path(p_path); -- returns cmd, arg1 (optional arg2, arg3, etc.)
-      result := issn.run_api(parts[1], parts[2], p_out, 200, p_apivers)::json; -- no bypass satus, so 200
+      result := issn.run_api(parts[1], parts[2], p_out, p_status, p_apivers)::json;
 
     WHEN 'getfrag-v1.0.0' THEN
 			result := json_build_object( 'status',555,  'result','under construction' );
@@ -119,7 +120,6 @@ CREATE or replace FUNCTION api.run_byuri(text) RETURNS json AS $f$
     END
   FROM  api.parse1_uri($1) t(s);  -- s1=apiName, s2=apivers, s3=path, s4=apiout
 $f$ LANGUAGE sql IMMUTABLE;
-
 
 ------------
 
