@@ -149,7 +149,13 @@ $func$ LANGUAGE SQL IMMUTABLE;
 -- -- -- -- -- -- -- -- -- -- -- --
 -- ISSN resolving services       --
 -- (complete and symmetric set)  --
--- isC, isN, N2C, N2Ns, N2Ns_formated
+-- info, isC, isN, N2C, N2Ns, N2Ns_formated
+
+CREATE or replace FUNCTION issn.info()  RETURNS json AS $func$
+  -- General database information.
+  SELECT to_json(t)
+  FROM (SELECT  *  FROM issn.info LIMIT 1) t;
+$func$ LANGUAGE SQL IMMUTABLE;
 
 CREATE or replace FUNCTION issn.isC(int)  RETURNS boolean AS $func$
   --
@@ -251,6 +257,23 @@ CREATE or replace FUNCTION issn.N2Ns_formated(text)  RETURNS text[] AS $func$
 $func$ LANGUAGE SQL IMMUTABLE;
 
 
+-- -- -- --
+
+CREATE or replace FUNCTION issn.info(int)  RETURNS json AS $func$
+  -- All informations about ISSN code
+  SELECT to_json(t)
+  FROM (
+    SELECT  issn.isN($1) as "isN", issn.isC($1) as "isC",
+      (SELECT t1 FROM (values(issn.cast(issn.N2C($1)), issn.N2Ns_formated($1))) as t1("N2C","N2Ns")) AS "convertions",
+      (SELECT t2 FROM (values(issn.N2C($1), issn.N2Ns($1))) as t2("N2C","N2Ns")) AS "int-convertions"
+  ) t;
+$func$ LANGUAGE SQL IMMUTABLE;
+
+CREATE or replace FUNCTION issn.info(int) RETURNS json AS $fwrap$
+  SELECT issn.info( issn.info($1) );
+$fwrap$ LANGUAGE SQL IMMUTABLE;
+
+
 -- -- -- -- -- -- -- -- -- -- --
 -- Services, T=text, X=XML and J=JSON --
 
@@ -269,6 +292,8 @@ DECLARE
 BEGIN
   cmd := lower(cmd);
   ret := CASE
+    WHEN cmd='info' AND $1 IS NOT NULL AND $1::text>'' THEN issn.info($1)  -- code info
+    WHEN cmd='info' THEN issn.info()  -- database info
     WHEN cmd='isc-int' OR cmd='isc' THEN to_json(issn.isc($1))
     WHEN cmd='isn-int' OR cmd='isn' THEN to_json(issn.isn($1))
     WHEN cmd='n2c-int'  THEN to_json(issn.n2c($1))
@@ -328,6 +353,8 @@ DECLARE
 BEGIN
   cmd := lower(cmd);
   ret := CASE
+    -- need XML convertion WHEN cmd='info' AND $1 IS NOT NULL AND $1::text>'' THEN issn.info($1)
+    -- ... WHEN cmd='info' THEN issn.info()
     WHEN cmd='isc-int' OR cmd='isc' THEN
       xmlelement(  name ret,  COALESCE( issn.isc($1)::text,'') )
     WHEN cmd='isn-int' OR cmd='isn' THEN
