@@ -1,33 +1,53 @@
 ISSN-L-resolver
 ===============
 
-**ISSN** is a standard public [opaque identifier](https://en.wikipedia.org/wiki/Unique_identifier) for [journals](https://en.wikipedia.org/wiki/Periodical_publication), assigned by the [ISSN-ORG authority](http://www.issn.org). Its main function is to be a short alias for the [systematic name](https://en.wikipedia.org/wiki/Systematic_name) of the journal, uniquely identifying the publication content (*ISSN-L*) or a specific [media type](https://en.wikipedia.org/wiki/Media_(communication)) of the publication. In the latter case, for example, the same journal can have an *eletronic-ISSN* and a *print-ISSN*, which identifies its electronic and printed publications separately.
+## Introduction
+**ISSN** is a standard public [opaque identifier](https://en.wikipedia.org/wiki/Unique_identifier) for [periodical publications](https://en.wikipedia.org/wiki/Periodical_publication)  &mdash; like  magazines, government gazettes, scientific journals,  and yearbooks  &mdash;, assigned by the [ISSN-ORG authority](http://www.issn.org). ISSN is also an valid URN, with [persistense assurance](https://www.iana.org/assignments/urn-formal/issn).
 
-The **ISSN-L resolver** converts any ISSN to its corresponding [ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN) ("linking ISSN") using a lightweight SQL structure:
+Its main function is to be a short alias for the [systematic name](https://en.wikipedia.org/wiki/Systematic_name) of the publication, uniquely identifying its [contents intellectual property](https://en.wikipedia.org/wiki/Indecs_Content_Model) (see ISSN-L) or its [published media types](https://en.wikipedia.org/wiki/Media_(communication)).
 
-  ````sql
+All media types of the same periodical (same systematic name and contents authority) are gruped as one unique ID, elected between the media's ISSNs, that is the [*ISSN-L*](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN) (short for *linking ISSN*) of the periodical. In this context we can say that ISSN-L is the *canonical name* of the periodic.
+
+ISSN-L is a unique identifier for all versions of the serial containing the same content across different media. As defined by ISO 3297:2007, the ISSN-L provides a mechanism for collocation or linking among the different media versions of the same continuing resource.
+
+### URN resolution
+
+Example from [iana.org/urn-formal/issn](https://www.iana.org/assignments/urn-formal/issn), the same journal can have an *eletronic-ISSN* and a *print-ISSN*, which identifies its electronic and printed publications separately:
+
+> URN:ISSN:1234-1231 identifies the current print edition of "Medical News".
+
+> URN:ISSN:1560-1560 identifies the current online edition of "Medical News".
+
+> The ISSN-L linking both media versions of "Medical News" happens to be ISSN-L 1234-1231 (i.e based on the ISSN 1234-1231, designated as such in the framework of the management of the ISSN Register).
+
+> The resolution of URN:ISSN:1234-1231 should be equivalent to the resolution of URN:ISSN:1560-1560; i.e., in both cases one should find a reference to the other media version.
+
+The example make it clear, an **ISSN-L resolver** MUST to convert any ISSN to its corresponding [ISSN-L](https://en.wikipedia.org/wiki/ISSN#Linking_ISSN). In this project we adopted  a lightweight SQL structure:
+
+```sql
    CREATE TABLE issn.intcode (
       issn integer NOT NULL PRIMARY KEY,
       issn_l integer NOT NULL
     );
-   CREATE INDEX issn_idx1 ON issn.intcode(issn_l);     
-  ````
+```
 
 The core of the *ISSN-L resolver* solution is a SQL script wrote for PostgreSQL, in PL/pgSQL language. It also offers functions to format and validate ISSN strings from the front-end, webservices or back-end.
 
 ## Synopsis ##
-The project has two main issues:
 
-  * A (PHP) "installer" that converts the (updated) "ISSN to ISSN-L" TXT table into a SQL table of integers (ISSN numbers without the *check digit*).
-  * A webservice for ISSN resolution.
+The project has three main issues:
 
-The webservice was implemented in three parts:
+  1. A (SQL+PHP) "installer" that converts the (updated) "ISSN to ISSN-L" TXT table into a SQL table of integers (ISSN numbers without the *check digit*).
+  2. An SQL-service-kit for ISSN resolution.
+  3. A webservice formalized by an OpenAPI description, and also implemented in SQL (+PHP+NGINX), for ISSN resolution.
 
- 1. The `lib.sql`, which offers a resolver with all "resolution operations" ([RFC2169](http://tools.ietf.org/html/rfc2169) inspired orthogonal instruction set), a converter and an ISSN handling system.
+The set of functions was implemented in modules named by is SQL-schemas:
 
- 2. An Apache2 application (here `.httpAccess` pointing to the PHP example) to expose the resolution into a simple and friendly set of webservice [endpoints](http://www.ibm.com/developerworks/webservices/library/ws-restwsdl/), encouraging its use as [intelligible permalinks](https://en.wikipedia.org/wiki/Permalink).
+ * The `lib.sql`, which offers a resolver with all "resolution operations" ([RFC2169](http://tools.ietf.org/html/rfc2169) inspired orthogonal instruction set), a converter and an ISSN handling system.
 
- 3. The webservice controller, implemented as a PHP script, that mediate Apache and SQL.
+ * An Nginx application (here using an  PHP-middleware example) to expose the resolution into a simple and friendly set of webservice [endpoints](http://www.ibm.com/developerworks/webservices/library/ws-restwsdl/), encouraging its use as [intelligible permalinks](https://en.wikipedia.org/wiki/Permalink).
+
+ * Schema API, with the webservice controller, implemented as SQL function, that mediate Apache and SQL.
 
 ## Installing database ##
 
@@ -40,7 +60,8 @@ PGPASSWORD=postgres psql -h localhost -U postgres  issnl < src/step1-schema.sql
 PGPASSWORD=postgres psql -h localhost -U postgres  issnl < src/step2-lib.sql
 PGPASSWORD=postgres psql -h localhost -U postgres  issnl < src/step3-api.sql
 ```
-To test populating script use `php src/step4-issnltables2sql.php`, to test functions with no database check by ` psql`.
+
+You can test functions with no database check by `psql -n`, but do better using the test-kit after populating, with the `step5-assert.sql`, as in the instructions below.
 
 ## Populating ##
 
@@ -59,20 +80,19 @@ With `issnltables2sql.php` you can convert the file into SQL and then run `psql`
 
 For demo you can use non-regurlar-update from [this zip](https://github.com/okfn-brasil/videos/raw/master/projeto/ISSN-L-Resolver/ISSN-to-ISSN-L.txt.zip).
 
-Sumary of the shell-script that will following,
+After install database (see above section) and test populating script with `$ php src/step4-issnltables2sql.php`,
+the following summarize what will express as shell-script below:
+ 1. unzip your updated issnltables.zip in a "issnltables"  folder (or the demo zip cited above)
+ 2. run step4 with `all` parameter,  piping to database.
+ 3. optional, run and (visual) check tests.
+ 4. optional, `rm -r issnltables` and `rm issnltables.zip`
 
- 1. after install database (see above section).
- 2. unzip your updated issnltables.zip in a "issnltables"  folder (or the demo zip cited above)
- 3. test populating script with `$ php src/step4-issnltables2sql.php`
- 4. run with `all` parameter,  piping to database.
- 5. optional, `rm -r issnltables` and `rm issnltables.zip`
-
-So, **start to install**. With `PGPASSWORD=postgres psql -h localhost -U postgres` run `CREATE database issnl;` to create a database. Go to the working folder and run his shell script:
 
 ```sh
-cd ISSN-L-Resolver
+# cd ISSN-L-Resolver
 unzip issnltables.zip -d issnltables
 php src/step4-issnltables2sql.php all | PGPASSWORD=postgres psql -h localhost -U postgres  issnl
+PGPASSWORD=postgres psql -h localhost -U postgres  issnl < src/step5-assert.sql | more
 ```
 
 ## Resolving ##
@@ -94,9 +114,11 @@ The letters in these *standard operation names* are used in the following sense:
  * "is": "isX" stands "is a kind of X" or "is really a X";
  * "2": stands "to", for convertion services.
 
+PS: in a next version we can include also URL of the periodic, for N2U, U2C, etc.
+
 ### With SQL ###
 
-Typical uses for resolver functions:
+Typical uses for resolver functions (same as `step5-assert`  script):
 
 ```sql
   SELECT issn.isC(115);         SELECT issn.isC('8755-9994');
@@ -109,7 +131,7 @@ Typical uses for resolver functions:
   -- returns            67          8755-9994
   SELECT issn.n2c(8755999);     SELECT issn.cast(issn.n2c(115));
   -- returns           8755999      0000-0671
-  SELECT issn.n2ns(8755999);    SELECT issn.xservice(8755999,'n2ns');
+  SELECT issn.n2ns(8755999);    SELECT issn.xservice_jspack(8755999,'n2ns');
   -- returns          {8755999}     <ret status="sucess"><issn>8755-9994</issn></ret>
   SELECT issn.n2ns_formated(115);
   -- returns {0000-0671,0000-1155,0065-759X,0065-910X,0068-0540,0074-6827,1067-8166}
@@ -118,7 +140,6 @@ Typical uses for resolver functions:
 See  `/demo` folder or a *live demo* at  [`api.ok.org.br`](http://api.ok.org.br) <!--or [`cta.if.ufrgs.br/ISSN-L`](http://cta.if.ufrgs.br/ISSN-L/index.php).-->
 
 ### With webservice (API) ###
-
 
 For [OpenApi](http://openapis.org)'s ISSN-API definition, see [swagger.yaml](swagger.yaml) (from [*ISSN-L-resolver/1.0.1*](https://app.swaggerhub.com/apis/ppKrauss/ISSN-L-resolver/1.0.1)) or http://api.ok.org.br#issn.
 

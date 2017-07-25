@@ -1,9 +1,8 @@
---
--- lib.issnl_get() and some util functions.
--- See Radme.md for CREATE TABLE and INDEX. Using "library" (lib) schema.
--- v1.0-2014 of https://github.com/ppKrauss/ISSN-L-resolver
---
-
+/**
+ * Library of all ISSN-Resolver functions as an orthogonal set of commands, its API methodos and util functions.
+ * See Radme.md for CREATE TABLE and INDEX. Depends ons 'issn', 'lib' and 'api' schemas.
+ * See https://github.com/okfn-brasil/ISSN-L-Resolver
+ */
 
 CREATE SCHEMA IF NOT EXISTS issn; -- ISSN-only library.
 
@@ -255,97 +254,109 @@ $func$ LANGUAGE SQL IMMUTABLE;
 -- -- -- -- -- -- -- -- -- -- --
 -- Services, T=text, X=XML and J=JSON --
 
-CREATE or replace FUNCTION issn.tservice(
-  --
-  -- Performs a "issn.*()" function and returns into a plain text.
-  --
-  int,        -- $1 the command argument
-  cmd   text  -- $2 the command (isC, isN, N2C, N2Ns, N2Ns_formated)
-)  RETURNS text AS $func$
-BEGIN
-  cmd := lower(cmd);
-  RETURN COALESCE(
-  CASE WHEN cmd='isc' THEN  issn.isc($1)::text
-       WHEN cmd='isn' THEN  issn.isn($1)::text
-       WHEN cmd='n2c' THEN  issn.cast(issn.n2c($1))::text
-  -- erro falta fixar delimitador com join_array
-       WHEN cmd='n2ns' THEN trim( issn.n2ns_formated($1)::text, '{}')
-       ELSE 'unknowing command'
-   END, ''); -- case
-END;
-$func$ LANGUAGE plpgsql IMMUTABLE;
-CREATE or replace FUNCTION issn.tservice(text,text)  RETURNS text AS $func$
-  --
-  -- Same as issn.tservice(int,text), but casting text input.
-  --
-  SELECT issn.tservice( issn.cast($1), $2 );
-$func$ LANGUAGE SQL IMMUTABLE;
-
-CREATE or replace FUNCTION issn.xservice(
-  --
-  -- Performs a "issn.*()" function and returns into a XML.
-  --
-  int,        -- $1 the command argument
-  cmd   text  -- $2 the command (isC, isN, N2C, N2Ns, N2Ns_formated)
-)  RETURNS xml  AS $func$
-BEGIN
-  cmd := lower(cmd);
-  RETURN CASE
-   WHEN cmd='isc' THEN
-    xmlelement(  name ret,  COALESCE(issn.isc($1)::text,'') )
-   WHEN cmd='isn' THEN
-    xmlelement(  name ret,  COALESCE(issn.isn($1)::text,'') )
-   WHEN cmd='n2c' THEN
-    xmlelement(  name ret,   COALESCE(issn.cast(issn.n2c($1)),'') )
-   WHEN cmd='n2ns' THEN (
-      SELECT xmlelement(  name ret,  xmlattributes('sucess' as status),  xmlagg(xmlelement(name issn,i))  )
-      FROM  (SELECT unnest( issn.n2ns_formated($1) ) as i ) as t
-     )
-   ELSE
-        xmlelement(  name ret,  xmlattributes('error' as status, 1 as cod), 'unknowing command' )
-   END; -- case
-END;
-$func$ LANGUAGE plpgsql IMMUTABLE;
-CREATE or replace FUNCTION issn.xservice(text,text)  RETURNS xml AS $fwrap$
-  --
-  -- Same as issn.xservice(int,text), but casting text input.
-  --
-  SELECT issn.xservice( issn.cast($1), $2 );
-$fwrap$ LANGUAGE SQL IMMUTABLE;
-
-
 CREATE or replace FUNCTION issn.jservice(
   --
   -- Performs a "issn.*()" function and returns into a JSON.
+  -- returns as standard jspack
   --
   int,        -- $1 the command argument
-  cmd   text  -- $2 the command (isC, isN, N2C, N2Ns, N2Ns_formated)
-)  RETURNS JSONb  AS $func$
+  cmd   text,  -- $2 the command (isC, isN, N2C, N2Ns, N2Ns_formated)
+  p_status  int=200,   -- for returning warnings by status code.
+  p_apivers text DEFAULT '1.0.2'  -- version (can be discard)
+)  RETURNS JSON  AS $func$
+DECLARE
+  ret json;
 BEGIN
   cmd := lower(cmd);
-  RETURN
-  CASE WHEN cmd='isc' THEN
-    to_jsonb(  issn.isc($1) )
-   WHEN cmd='isn' THEN
-    to_jsonb(  issn.isn($1) )
-   WHEN cmd='n2c' THEN
-    to_jsonb(  issn.cast(issn.n2c($1)) )
-   WHEN cmd='n2ns' THEN (
-     SELECT to_jsonb( array_agg(i) )
-     FROM  (SELECT unnest( issn.n2ns_formated($1) ) as i ) as t
-    )
-   ELSE
-      jsonb_build_object('status','error',  'cod',1,  'error_message','unknowing command')
-   END; -- case
+  ret := CASE
+    WHEN cmd='isc-int' OR cmd='isc' THEN to_json(issn.isc($1))
+    WHEN cmd='isn-int' OR cmd='isn' THEN to_json(issn.isn($1))
+    WHEN cmd='n2c-int'  THEN to_json(issn.n2c($1))
+    WHEN cmd='n2ns-int' THEN to_json(issn.n2ns($1))
+    WHEN cmd='n2c'      THEN to_json(issn.cast(issn.n2c($1)))
+    WHEN cmd='n2ns'     THEN to_json(issn.n2ns_formated($1))
+    ELSE to_json(text '_ERROR_')
+  END; -- case
+  IF ret#>>'{}' = '_ERROR_' THEN
+    RETURN json_build_object( 'status',501,  'result','Unknowing ISSN-API method: '||COALESCE(cmd,'?null?'));
+  ELSEIF ret IS NULL THEN
+    RETURN json_build_object( 'status',404,  'result','has not found the requested ISSN code '||COALESCE($1::text,'null') ); -- and 416?
+  ELSE
+    RETURN json_build_object('status',p_status, 'result',ret);
+  END IF;
 END;
 $func$ LANGUAGE plpgsql IMMUTABLE;
 
-CREATE or replace FUNCTION issn.jservice(text,text)  RETURNS jsonb AS $fwrap$
-  --
-  -- Same as issn.jservice(int,text), but casting text input.
-  --
-  SELECT issn.jservice( issn.cast($1), $2 );
+CREATE or replace FUNCTION issn.jservice(text,text,int=200,text DEFAULT '1.0.2') RETURNS json AS $fwrap$
+  SELECT issn.jservice( issn.cast($1), $2, $3, $4 );
 $fwrap$ LANGUAGE SQL IMMUTABLE;
+
+
+CREATE or replace FUNCTION issn.tservice_jspack(
+  --
+  -- Performs a "issn.*()" function and returns into a plain text. Or Null when error.
+  --
+  int,         -- $1 the command argument
+  cmd   text,  -- $2 the command (isC, isN, N2C, N2Ns, N2Ns_formated)
+  p_status  int=200,   -- for returning warnings by status code.
+  p_apivers text DEFAULT '1.0.2'  -- version (can be discard)
+)  RETURNS json AS $func$
+  SELECT json_build_object('status',r->>'status', 'result', CASE
+      WHEN json_typeof(r->'result')='array' THEN array_to_string(lib.json_array_castext(r->'result'),',')
+      ELSE r->>'result'
+      END)
+  FROM (SELECT issn.jservice($1,$2,$3,$4)) t(r);
+$func$ LANGUAGE SQL IMMUTABLE;
+
+CREATE or replace FUNCTION issn.tservice_jspack(text, text, int=200, text DEFAULT '1.0.2') RETURNS json AS $fwrap$
+  SELECT issn.tservice_jspack( issn.cast($1), $2, $3, $4 );
+$fwrap$ LANGUAGE SQL IMMUTABLE;
+
+
+CREATE or replace FUNCTION issn.xservice_jspack(
+  --
+  -- Performs a "issn.*()" function and returns into a XML.
+  --
+  int,  -- $1 the command argument
+  cmd       text,                -- $2 the command (isC, isN, N2C, N2Ns, N2Ns_formated)
+  p_status  int=200,     -- for returning warnings by status code.
+  p_apivers text DEFAULT '1.0.2' -- version (can be discard)
+)  RETURNS json  AS $func$
+DECLARE
+  ret xml;
+  retstr text;
+BEGIN
+  cmd := lower(cmd);
+  ret := CASE
+    WHEN cmd='isc-int' OR cmd='isc' THEN
+      xmlelement(  name ret,  COALESCE(issn.isc($1)::text,'') )
+    WHEN cmd='isn-int' OR cmd='isn' THEN
+      xmlelement(  name ret,  COALESCE(issn.isn($1)::text,'') )
+    WHEN cmd='n2c-int'  THEN
+      xmlelement(  name ret,   COALESCE(issn.cast(issn.n2c($1)),'') )
+    WHEN cmd='n2ns-int' OR cmd='n2ns' THEN (
+      SELECT xmlelement(  name ret,  xmlagg( xmlelement(name issn,i) )  )
+      FROM  (
+        SELECT unnest( CASE WHEN cmd='n2ns-int' THEN issn.n2ns($1)::text[] ELSE issn.n2ns_formated($1) END )
+      ) t(i)
+     )
+    ELSE (text '<_ERROR_/>')::xml
+  END; -- case
+  retstr := ret::text;
+  IF retstr = '<_ERROR_/>' THEN
+    RETURN json_build_object('status',511,  'result','Unknowing ISSN-API method');
+  ELSEIF retstr = '<ret></ret>' THEN
+    RETURN json_build_object('status',404,  'result','has not found the requested issn');
+  ELSE
+    RETURN json_build_object('status',p_status, 'result',retstr);
+  END IF;
+END;
+$func$ LANGUAGE plpgsql IMMUTABLE;
+
+CREATE or replace FUNCTION issn.xservice_jspack(text,text,int=200, text DEFAULT '1.0.2') RETURNS json AS $fwrap$
+  SELECT issn.xservice_jspack( issn.cast($1), $2, $3, $4 );
+$fwrap$ LANGUAGE SQL IMMUTABLE;
+
 
 
 ------------------------
@@ -353,66 +364,90 @@ $fwrap$ LANGUAGE SQL IMMUTABLE;
 
 CREATE or replace FUNCTION issn.any_service(
   --
-  -- Executes a service. Selector for issn.jservice(), issn.xservice(), etc.
+  -- Executes a service. Selector for issn.jservice(), issn.xservice_jspack(), etc.
+  -- See also fwrap for text.
   -- Example: issn.any_service('n2c',1234,'xml');
   p_cmd text,      -- command
   p_issn7 int,     -- ISSN integer. (see also text for full ISSN code)
   p_out text DEFAULT 'json',      -- output datatype.
-  p_apivers text DEFAULT '1.0.0',  -- version (can be discard)
-  p_status  int DEFAULT 200   -- for returning warnings by status code.
-)  RETURNS jsonb AS $f$
-  SELECT jsonb_build_object('status',p_status,  'result',result)
+  p_status  int=200,   -- for returning warnings by status code. See any_service(text,text).
+  p_apivers text DEFAULT '1.0.2'  -- version (can be discard)
+)  RETURNS json AS $f$
+  SELECT r --jsonb_build_object('status',p_status,  'result',result)
   FROM (
     SELECT CASE
-      WHEN out='j' THEN issn.Jservice(p_issn7,p_cmd)  -- carregar o status? p_apivers?
-      WHEN out='t' THEN to_jsonb(issn.Tservice(p_issn7,p_cmd))
-      ELSE to_jsonb(issn.Xservice(p_issn7,p_cmd))
-      END AS result
-    FROM (SELECT substr(p_out, 1, 1) as out) t1
-  ) t2;
+      WHEN out='t' THEN issn.tservice_jspack(p_issn7,p_cmd,p_status,p_apivers)
+      WHEN out='x' THEN issn.xservice_jspack(p_issn7,p_cmd,p_status,p_apivers)
+      WHEN out='j' THEN issn.Jservice(p_issn7,p_cmd,p_status,p_apivers)
+      ELSE
+        json_build_object('status',511,  'result','Unknowing ISSN-API output parameter, '||COALESCE(p_cmd,'??')||out)
+      END
+    FROM ( SELECT substr(p_out, 1, 1) ) t1(out)
+  ) t2(r);
 $f$ LANGUAGE SQL IMMUTABLE;
 
-CREATE or replace FUNCTION issn.any_service(text,text,text,text DEFAULT '1.0.0') RETURNS jsonb AS $fwrap$
+CREATE or replace FUNCTION issn.any_service(text,text,text,int,text DEFAULT '1.0.2') RETURNS json AS $fwrap$
   --
   -- Same as issn.any_service(text,int,...), but casting text input.
   -- Example: issn.any_service('n2ns','0000-0043','j'); -- or 0000-004X to change status
   --
   SELECT issn.any_service(
-    $1, issn.cast($2), $3, $4, CASE WHEN issn.check($2) THEN 200 ELSE 250 END
+    $1, issn.cast($2), $3, CASE WHEN issn.check($2) THEN 200 ELSE $4 END, $5
   );
 $fwrap$ LANGUAGE SQL IMMUTABLE;
 
 ------------------------
 -- API specialized wrap for issn.any_service()
 
+CREATE or replace FUNCTION issn.parse2_path(
+  text  --  input as 'int/123/n2c' or '123/n2c'
+  -- returns cmd,arg1 para run_api().
+) RETURNS text[] AS $func$
+DECLARE
+  parts text[];
+  aux text;
+BEGIN
+  -- IF $1 IS NULL THEN RETURN array['',''];
+  parts := regexp_matches($1, '^(int/)?(\d+.+)$');
+  IF parts IS NULL OR parts[2] IS NULL THEN
+    RETURN array[NULL,NULL]; -- revisar se melhor null,error
+  END IF;
+  aux   := parts[2] || CASE WHEN parts[1] IS NULL THEN '' ELSE '-int' END;
+  parts := regexp_split_to_array(aux, '/');
+  IF parts IS NULL OR array_length(parts,1)!=2 THEN
+    RETURN array[NULL,NULL]; -- revisar
+  END IF;
+  RETURN array[parts[2],parts[1]]; -- cmd, arg1. Example ('n2c',123)
+END
+$func$ LANGUAGE PLpgSQL IMMUTABLE;
+
+
 CREATE or replace FUNCTION issn.run_api(
-  cmd text,   --
-  arg1 text,  -- main command
-  p_out text,  -- output type
-  p_apivers text
-) RETURNS jsonb AS $func$
+  cmd  text,  -- main command
+  arg1 text,  -- parameters
+  p_out text      ='json',  -- output type
+  p_status  int   =200,  -- precisa?
+  p_apivers text  ='1.0.2'
+) RETURNS json AS $func$
 -- NAO PODE RETORNAR NULL
 DECLARE
   api text; -- API full-name
-  arg1 text;
-  apis_specs json;
-  cmd  text;
+  cmds_specs json;
   cmdlist text[];
 BEGIN
-  apis_specs := '{"issn-v1.0.1":["isn","isc","n2c","n2ns"],"issn-v1.0.0":["isn","isc","n2c","n2ns"]}'::json;
-  api := 'issn-v'||	p_apivers; -- full name
-  IF apis_specs->api IS NULL THEN
-      RETURN json_build_object('error',533,  'msg','nao achei specs de api='||api);
+  cmds_specs := '{"issn-v1.0.2":["isn","isc","n2c","n2ns","isn-int","isc-int","n2c-int","n2ns-int"],"issn-v1.0.0":["isn","isc","n2c","n2ns"]}'::json;
+  api := 'issn-v'||	COALESCE(p_apivers,'_?_'); -- full name
+  IF cmds_specs->api IS NULL THEN
+    RETURN json_build_object( 'status',533,  'result','Unknowing ISSN-API or version: '||api );
   END IF;
-  cmdlist := lib.json_array_castext(apis_specs->api);
-  arg1 := parts[1]; -- ISSN code-string or code-integer.
-  IF NOT(cmd = ANY(cmdlist)) THEN
-    RETURN jsonb_build_object('error',3,  'msg','nao achei cmd='||cmd );
+  cmdlist := lib.json_array_castext(cmds_specs->api);
+  IF cmd IS NULL OR NOT(cmd = ANY(cmdlist)) THEN
+    RETURN json_build_object( 'status',534,  'result','Unknowing method '||COALESCE(cmd,'_?_')||' at ISSN-API '||api );
   END IF;
-  IF  POSITION('-' in arg1)>0 OR char_length(arg1)>7 THEN
-    RETURN issn.any_service(cmd,arg1,p_out,p_apivers);
+  IF POSITION('-' in arg1)>0 OR char_length(arg1)>7 THEN  -- parsing ISSN string!
+    RETURN issn.any_service(cmd, arg1,     p_out,  p_status, p_apivers);
   ELSE -- same except cast to int
-    RETURN issn.any_service(cmd,arg1::int,p_out,p_apivers);
+    RETURN issn.any_service(cmd, arg1::int,p_out, p_status, p_apivers);
   END IF;
 END
 $func$ LANGUAGE PLpgSQL IMMUTABLE;

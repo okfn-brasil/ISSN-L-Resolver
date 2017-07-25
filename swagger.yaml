@@ -5,7 +5,7 @@ swagger: '2.0'
 #####################################################################
 info:
   title: ISSN-L Resolver
-  version: "1.0.1"
+  version: "1.0.2"
 
   description: |
     Validate ISSN's and ISSN-L's, and converts any ISSN to the correspondent (canonic) ISSN-L.
@@ -53,6 +53,17 @@ parameters:
     minimum: 1
     maximum: 9999999
 
+definitions:
+  ArrayOfInt:
+    type: array
+    items:
+      type: integer
+
+  ArrayOfStr:
+    type: array
+    items:
+      type: string
+
 #####################################################################
 #                              PATHS                                #
 #####################################################################
@@ -67,14 +78,15 @@ paths:
       description: |
         Check that input is a Linking ISSN (an ISSN-L). The error 404 needs an updated database, to be an real "ISSN not exists". 
       produces:
-      - application/xml
+        - application/json
+        - application/xml
       parameters:
       - $ref: '#/parameters/issn'
       responses:
         200:
           description: search results matching criteria
           schema:
-            type: integer
+            type: boolean
         404:
           description: has not found the input issn.
         416:
@@ -89,14 +101,15 @@ paths:
       description: |
         Check that the Name (ISSN) exists, returning true. When input is out of range returns null, else the boolean false indicates "not found".
       produces:
-      - application/xml
+        - application/json
+        - application/xml
       parameters:
       - $ref: '#/parameters/issn'
       responses:
         200:
           description: search results matching criteria
           schema:
-            type: integer
+            type: boolean
         404:
           description: has not found the requested issn.
         416:
@@ -112,7 +125,8 @@ paths:
       description: |
         Check that input is a Linking ISSN (an ISSN-L). The error 404 needs an updated database, to be an real "ISSN not exists". 
       produces:
-      - application/xml
+        - application/json
+        - application/xml
       parameters:
       - $ref: '#/parameters/issn7'
       responses:
@@ -134,7 +148,8 @@ paths:
       description: |
         Check that the Name (ISSN) exists, returning true. When input is out of range returns null, else the boolean false indicates "not found".
       produces:
-      - application/xml
+        - application/json
+        - application/xml
       parameters:
       - $ref: '#/parameters/issn7'
       responses:
@@ -157,14 +172,15 @@ paths:
       description: |
         Converts commom ISSN input into a corresponding Linking ISSN (an ISSN-L).
       produces:
-      - application/xml
+        - application/json
+        - application/xml
       parameters:
       - $ref: '#/parameters/issn'
       responses:
         200:
           description: search results matching criteria
           schema:
-            type: integer
+            type: string
         404:
           description: has not found the input issn.
         416:
@@ -179,14 +195,15 @@ paths:
       description: |
         Converts commom ISSN input into a corresponding "grouped by ISSN-L" set of ISSNs.
       produces:
-      - application/xml
+        - application/json
+        - application/xml
       parameters:
       - $ref: '#/parameters/issn'
       responses:
         200:
           description: search results matching criteria
           schema:
-            type: integer
+            $ref: "#/definitions/ArrayOfStr"
         404:
           description: has not found the input issn.
         416:
@@ -201,7 +218,8 @@ paths:
       description: |
         Converts Converts integer input (representing an ISSN code) into a corresponding Linking ISSN (an ISSN-L).
       produces:
-      - application/xml
+        - application/json
+        - application/xml
       parameters:
       - $ref: '#/parameters/issn7'
       responses:
@@ -223,14 +241,15 @@ paths:
       description: |
         Converts Converts integer input (representing an ISSN code) into a corresponding "group by ISSN-L" set of ISSNs.
       produces:
-      - application/xml
+        - application/json
+        - application/xml
       parameters:
       - $ref: '#/parameters/issn7'
       responses:
         200:
           description: search results matching criteria
           schema:
-            type: integer
+            $ref: "#/definitions/ArrayOfInt"
         404:
           description: has not found the input issn.
         416:
@@ -245,12 +264,13 @@ paths:
       description: |
         Information about ISSN database. Not use REST status codes.
       produces:
-      - application/xml
+        - application/json
+        - application/xml
       responses:
         200:
           description: retrieve information
           schema:
-            type: integer
+            type: object
 
   /{issn}/info:
     get:
@@ -261,18 +281,19 @@ paths:
       description: |
         Supply all basic metadata about input and, when not exist, explain in a error message. Not use REST status codes.
       produces:
-      - application/xml
+        - application/json
+        - application/xml
       parameters:
       - $ref: '#/parameters/issn'
       responses:
         200:
           description: retrieve information
           schema:
-            type: integer
+            type: object
+
 
 # Added by API Auto Mocking Plugin
 host: issn.oficial.news
 schemes:
  - http
  - https
- 
