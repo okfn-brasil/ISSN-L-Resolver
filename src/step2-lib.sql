@@ -269,8 +269,8 @@ CREATE or replace FUNCTION issn.info(int)  RETURNS json AS $func$
   ) t;
 $func$ LANGUAGE SQL IMMUTABLE;
 
-CREATE or replace FUNCTION issn.info(int) RETURNS json AS $fwrap$
-  SELECT issn.info( issn.info($1) );
+CREATE or replace FUNCTION issn.info(text) RETURNS json AS $fwrap$
+  SELECT issn.info( issn.cast($1) );
 $fwrap$ LANGUAGE SQL IMMUTABLE;
 
 
@@ -430,19 +430,24 @@ CREATE or replace FUNCTION issn.parse2_path(
 ) RETURNS text[] AS $func$
 DECLARE
   parts text[];
+  parts_n int;
   aux text;
 BEGIN
   -- IF $1 IS NULL THEN RETURN array['',''];
-  parts := regexp_matches($1, '^(int/)?(\d+.+)$');
+  parts := regexp_matches($1, '^(int/)?(\d+.+|info)$');
   IF parts IS NULL OR parts[2] IS NULL THEN
     RETURN array[NULL,NULL]; -- revisar se melhor null,error
   END IF;
   aux   := parts[2] || CASE WHEN parts[1] IS NULL THEN '' ELSE '-int' END;
   parts := regexp_split_to_array(aux, '/');
-  IF parts IS NULL OR array_length(parts,1)!=2 THEN
+  parts_n := array_length(parts,1);
+  IF parts IS NULL OR parts_n>2 THEN
     RETURN array[NULL,NULL]; -- revisar
+  ELSEIF parts_n=1 THEN
+    RETURN array['info',NULL];
+  ELSE
+    RETURN array[parts[2],parts[1]]; -- cmd, arg1. Example ('n2c',123)
   END IF;
-  RETURN array[parts[2],parts[1]]; -- cmd, arg1. Example ('n2c',123)
 END
 $func$ LANGUAGE PLpgSQL IMMUTABLE;
 
