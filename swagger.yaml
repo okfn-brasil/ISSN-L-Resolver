@@ -5,7 +5,7 @@ swagger: '2.0'
 #####################################################################
 info:
   title: ISSN-L Resolver
-  version: "1.0.2"
+  version: "1.0.3"
 
   description: |
     Validate ISSN's and ISSN-L's, and converts any ISSN to the correspondent (canonic) ISSN-L.
@@ -293,7 +293,8 @@ paths:
 
 
 # Added by API Auto Mocking Plugin
-host: issn.oficial.news
+host: api.ok.org.br
+basePath: /issn
 schemes:
  - http
  - https

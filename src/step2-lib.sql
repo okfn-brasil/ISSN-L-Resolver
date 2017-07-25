@@ -278,7 +278,7 @@ BEGIN
     ELSE to_json(text '_ERROR_')
   END; -- case
   IF ret#>>'{}' = '_ERROR_' THEN
-    RETURN json_build_object( 'status',501,  'result','Unknowing ISSN-API method: '||COALESCE(cmd,'?null?'));
+    RETURN json_build_object( 'status',520,  'result','Unknowing ISSN-API method: '||COALESCE(cmd,'?null?'));
   ELSEIF ret IS NULL THEN
     RETURN json_build_object( 'status',404,  'result','has not found the requested ISSN code '||COALESCE($1::text,'null') ); -- and 416?
   ELSE
@@ -329,14 +329,14 @@ BEGIN
   cmd := lower(cmd);
   ret := CASE
     WHEN cmd='isc-int' OR cmd='isc' THEN
-      xmlelement(  name ret,  COALESCE(issn.isc($1)::text,'') )
+      xmlelement(  name ret,  COALESCE( issn.isc($1)::text,'') )
     WHEN cmd='isn-int' OR cmd='isn' THEN
-      xmlelement(  name ret,  COALESCE(issn.isn($1)::text,'') )
-    WHEN cmd='n2c-int'  THEN
-      xmlelement(  name ret,   COALESCE(issn.cast(issn.n2c($1)),'') )
+      xmlelement(  name ret,  COALESCE( issn.isn($1)::text,'') )
+    WHEN cmd='n2c-int' OR cmd='n2c' THEN
+      xmlelement(  name ret,   COALESCE( issn.n2c($1),0) )
     WHEN cmd='n2ns-int' OR cmd='n2ns' THEN (
-      SELECT xmlelement(  name ret,  xmlagg( xmlelement(name issn,i) )  )
-      FROM  (
+      SELECT xmlelement(  name ret,  xmlagg( xmlelement(name issn,COALESCE(i,'')) )  )
+      FROM  ( -- need check when null
         SELECT unnest( CASE WHEN cmd='n2ns-int' THEN issn.n2ns($1)::text[] ELSE issn.n2ns_formated($1) END )
       ) t(i)
      )
@@ -344,7 +344,7 @@ BEGIN
   END; -- case
   retstr := ret::text;
   IF retstr = '<_ERROR_/>' THEN
-    RETURN json_build_object('status',511,  'result','Unknowing ISSN-API method');
+    RETURN json_build_object('status',520,  'result','Unknowing ISSN-API method: '||COALESCE(cmd,'?null?'));
   ELSEIF retstr = '<ret></ret>' THEN
     RETURN json_build_object('status',404,  'result','has not found the requested issn');
   ELSE
@@ -380,17 +380,13 @@ CREATE or replace FUNCTION issn.any_service(
       WHEN out='x' THEN issn.xservice_jspack(p_issn7,p_cmd,p_status,p_apivers)
       WHEN out='j' THEN issn.Jservice(p_issn7,p_cmd,p_status,p_apivers)
       ELSE
-        json_build_object('status',511,  'result','Unknowing ISSN-API output parameter, '||COALESCE(p_cmd,'??')||out)
+        json_build_object('status',520,  'result','Unknowing ISSN-API output parameter, '|| out)
       END
-    FROM ( SELECT substr(p_out, 1, 1) ) t1(out)
+    FROM ( SELECT coalesce(substr(p_out, 1, 1),'?null?') ) t1(out)
   ) t2(r);
 $f$ LANGUAGE SQL IMMUTABLE;
 
 CREATE or replace FUNCTION issn.any_service(text,text,text,int,text DEFAULT '1.0.2') RETURNS json AS $fwrap$
-  --
-  -- Same as issn.any_service(text,int,...), but casting text input.
-  -- Example: issn.any_service('n2ns','0000-0043','j'); -- or 0000-004X to change status
-  --
   SELECT issn.any_service(
     $1, issn.cast($2), $3, CASE WHEN issn.check($2) THEN 200 ELSE $4 END, $5
   );
@@ -435,15 +431,15 @@ DECLARE
   cmds_specs json;
   cmdlist text[];
 BEGIN
-  cmds_specs := '{"issn-v1.0.2":["isn","isc","n2c","n2ns","isn-int","isc-int","n2c-int","n2ns-int"],"issn-v1.0.0":["isn","isc","n2c","n2ns"]}'::json;
+  cmds_specs := '{"issn-v1.0.2":1}'::json;
   api := 'issn-v'||	COALESCE(p_apivers,'_?_'); -- full name
   IF cmds_specs->api IS NULL THEN
-    RETURN json_build_object( 'status',533,  'result','Unknowing ISSN-API or version: '||api );
+    RETURN json_build_object( 'status',520,  'result','Unknowing ISSN-API or version: '||api );
   END IF;
-  cmdlist := lib.json_array_castext(cmds_specs->api);
-  IF cmd IS NULL OR NOT(cmd = ANY(cmdlist)) THEN
-    RETURN json_build_object( 'status',534,  'result','Unknowing method '||COALESCE(cmd,'_?_')||' at ISSN-API '||api );
-  END IF;
+  --cmdlist := lib.json_array_castext(cmds_specs->api);
+  --IF cmd IS NULL OR NOT(cmd = ANY(cmdlist)) THEN
+  --  RETURN json_build_object( 'status',534,  'result','Unknowing method '||COALESCE(cmd,'_?_')||' at ISSN-API '||api );
+  --END IF;
   IF POSITION('-' in arg1)>0 OR char_length(arg1)>7 THEN  -- parsing ISSN string!
     RETURN issn.any_service(cmd, arg1,     p_out,  p_status, p_apivers);
   ELSE -- same except cast to int

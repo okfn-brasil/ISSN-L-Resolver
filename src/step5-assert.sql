@@ -36,7 +36,7 @@ api.assert_eq(
 
 SELECT  api.assert_eq( issn.jservice(67,'n2c')::text, '{"status" : 200, "result" : "0000-1155"}', 			'67','jservice(n2c(int))' ) as "jservice(N2C)";
 SELECT  api.assert_eq( issn.tservice_jspack(67,'n2c')::text, '{"status" : "200", "result" : "0000-1155"}', 			'67','n2c(int)' ) as "tservice(N2C)";
-SELECT  api.assert_eq( issn.xservice_jspack(67,'n2c')::text, 'xxx', 			'67','n2c(int)' ) as "xservice(N2C)";
+SELECT  api.assert_eq( issn.xservice_jspack(67,'n2c')::text, '{"status" : 200, "result" : "<ret>115</ret>"}', 			'67','n2c(int)' ) as "xservice(N2C)";
 
 
 ---------------

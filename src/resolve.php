@@ -3,14 +3,13 @@
  * Index or include for console.  Basic GENERIC APP SERVER for SQL-defined services.
  * For OpenAPI implementation of a SQL-based set of services.
  * Best alternative: PostGraphQL
- * Best complement: PostgREST-writeAPI
+ * @see https://github.com/okfn-brasil/ISSN-L-Resolver
  * @see future, output accept content negotiation...
  */
 
-// FALTA trazer de volta o modo de output e decidir o que fazer com os error codes adicionais.
 
 $isCli = (php_sapi_name() === 'cli');
-$res = new app($isCli? ('issn/004/n2ns/argc='.$argc): $_SERVER['QUERY_STRING']);
+$res = new app($isCli? (isset($argv[1])? $argv[1]: 'issn/67/n2ns'): $_SERVER['QUERY_STRING']);
 
 class app {
 
@@ -37,8 +36,8 @@ class app {
   }
 
   function runByUri($uri) {
-    if ($this->isCli) $uri.=".".$this->outFormat; // enforce ... future content negotiation.
-    echo "\n SELECT api.run_byuri('$uri')";
+    //if ($this->isCli) $uri.=".".$this->outFormat; // enforce ... future content negotiation.
+    //echo "\n SELECT api.run_byuri('$uri')";
     $sth = $this->dbh->prepare('SELECT api.run_byuri(?)');
     $sth->bindParam(1, $uri, PDO::PARAM_STR);
     $sth->execute();
@@ -48,7 +47,7 @@ class app {
       $r = $a['result'];
     } else
       $r = $a;
-      $this->die(json_encode($r)); // need error code?
+    $this->die(json_encode($r)); // need error code?
   }
 
   /**
