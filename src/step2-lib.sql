@@ -332,8 +332,10 @@ BEGIN
       xmlelement(  name ret,  COALESCE( issn.isc($1)::text,'') )
     WHEN cmd='isn-int' OR cmd='isn' THEN
       xmlelement(  name ret,  COALESCE( issn.isn($1)::text,'') )
-    WHEN cmd='n2c-int' OR cmd='n2c' THEN
+    WHEN cmd='n2c-int' THEN
       xmlelement(  name ret,   COALESCE( issn.n2c($1),0) )
+    WHEN cmd='n2c' THEN
+      xmlelement(  name ret,   COALESCE( issn.cast(issn.n2c($1)),0) )
     WHEN cmd='n2ns-int' OR cmd='n2ns' THEN (
       SELECT xmlelement(  name ret,  xmlagg( xmlelement(name issn,COALESCE(i,'')) )  )
       FROM  ( -- need check when null
